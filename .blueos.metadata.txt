@@ -1,0 +1,13 @@
+# <bitbar.title>BlueOS.15s</bitbar.title>
+# <bitbar.version>v0.30</bitbar.version>
+# <bitbar.author>chew-z</bitbar.author>
+# <bitbar.author.github>chew-z</bitbar.author.github>
+# <bitbar.desc>Status bar for BlueOS devices</bitbar.desc>
+# <bitbar.dependencies>Golang</bitbar.dependencies>
+# <swiftbar.hideAbout>true</swiftbar.hideAbout>
+# <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
+# <swiftbar.hideLastUpdated>true</swiftbar.hideLastUpdated>
+# <swiftbar.hideDisablePlugin>false</swiftbar.hideDisablePlugin>
+# <swiftbar.hideSwiftBar>true</swiftbar.hideSwiftBar>
+# <swiftbar.refreshOnOpen>true</swiftbar.refreshOnOpen>
+# 

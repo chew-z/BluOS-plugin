@@ -1,0 +1,6 @@
+.DS_Store
+go.sum
+.env.yaml
+.env
+*.json
+bin/**
