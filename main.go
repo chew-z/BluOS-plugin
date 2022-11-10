@@ -15,10 +15,10 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+const MAX = 50
+
 var (
 	myConfig map[string]string
-	osxCmd   = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-	osxArgs  = "-I"
 )
 
 func init() {
@@ -30,7 +30,6 @@ func init() {
 }
 
 func main() {
-	// log.Println(myConfig)
 	blueWiFi := myConfig["BLUE_WIFI"]
 	bluePlayer := myConfig["BLUE_URL"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayer)
@@ -39,12 +38,11 @@ func main() {
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
 	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		// app.StatusLine(ssid)
-		app.StatusLine(":play.slash.fill:").Color("red")
+		app.StatusLine(":b.circle.fill:")
 		goto AppRender
 	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
-		submenu.Line(err.Error()).Color("red").Length(25)
+		submenu.Line(err.Error()).Color("red").Length(MAX)
 		log.Printf("Failed to get XML: %v", err)
 	} else {
 		var state StateXML
@@ -55,34 +53,44 @@ func main() {
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			app.StatusLine(l1).DropDown(false)
-			app.StatusLine(l2).DropDown(false)
-			app.StatusLine(l3).DropDown(false)
+			app.StatusLine(l1).DropDown(true).Length(MAX)
+			app.StatusLine(l2).DropDown(false).Length(MAX)
+			app.StatusLine(l3).DropDown(false).Length(MAX)
 		} else if state.State == "stream" {
 			icon = ":play:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
-			app.StatusLine(l1).DropDown(false).Length(50)
-			app.StatusLine(l2).DropDown(false)
+			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
+			app.StatusLine(l2).DropDown(true).Length(MAX)
+			app.StatusLine(l3).DropDown(false).Length(MAX)
 		} else if state.State == "pause" {
 			icon = ":pause.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			app.StatusLine(l1).DropDown(false).Length(50)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
 		} else if state.State == "stop" {
 			icon = ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
-			app.StatusLine(l1).DropDown(false).Length(50)
+			app.StatusLine(l1).DropDown(false)
 		}
 	}
 	if xmlBytes, err := getXML(presetsUrl); err != nil {
-		submenu.Line(err.Error()).Color("red").Length(25)
+		submenu.Line(err.Error()).Color("red").Length(MAX)
 		log.Printf("Failed to get XML: %v", err)
 	} else {
 		var presets Presets
 		xml.Unmarshal(xmlBytes, &presets)
 		for _, p := range presets.Preset {
 			l := fmt.Sprintf("%s - %s", p.ID, p.Name)
-			submenu.Line(l)
+			c := fmt.Sprintf("%s/Preset?id=%s", bluePlayer, p.ID)
+			log.Println(c)
+			cmd := bitbar.Cmd{
+				Bash:     "/usr/local/opt/curl/bin/curl",
+				Params:   []string{c},
+				Terminal: BoolPointer(false),
+				Refresh:  BoolPointer(false),
+			}
+			submenu.Line(l).Command(cmd)
 			// log.Println(p.ID, p.Name)
 		}
 	}
@@ -113,9 +121,10 @@ func getXML(url string) ([]byte, error) {
 
 func getSSID() string {
 
+	const osxCmd = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+	const osxArgs = "-I"
 	cmd := exec.Command(osxCmd, osxArgs)
 	stdout, _ := cmd.StdoutPipe()
-	// start the command after having set up the pipe
 	if err := cmd.Start(); err != nil {
 		return "Could not get SSID"
 	}
@@ -132,6 +141,10 @@ func getSSID() string {
 	} else {
 		return name
 	}
+}
+
+func BoolPointer(b bool) *bool {
+	return &b
 }
 
 type StateXML struct {
