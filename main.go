@@ -19,7 +19,6 @@ var (
 	myConfig map[string]string
 	osxCmd   = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
 	osxArgs  = "-I"
-	ssid     string
 )
 
 func init() {
@@ -31,14 +30,16 @@ func init() {
 }
 
 func main() {
-	log.Println(myConfig)
-	wifi := myConfig["WIFI"]
-	bluePlayer := myConfig["BLUE"]
+	// log.Println(myConfig)
+	blueWiFi := myConfig["BLUE_WIFI"]
+	bluePlayer := myConfig["BLUE_URL"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayer)
+
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
-	if ssid := getSSID(); !strings.Contains(ssid, wifi) {
+	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
 		app.StatusLine(ssid)
+		app.StatusLine(":play.slash.fill:")
 		goto AppRender
 	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
@@ -91,31 +92,23 @@ func getXML(url string) ([]byte, error) {
 func getSSID() string {
 
 	cmd := exec.Command(osxCmd, osxArgs)
-	stdout, err := cmd.StdoutPipe()
-	panicIf(err)
+	stdout, _ := cmd.StdoutPipe()
 	// start the command after having set up the pipe
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		return "Could not get SSID"
 	}
 	defer cmd.Wait()
-	var str string
 
+	var airport string
 	if b, err := ioutil.ReadAll(stdout); err == nil {
-		str += (string(b) + "\n")
+		airport += (string(b) + "\n")
 	}
-	r := regexp.MustCompile(`s*SSID: (.+)s*`)
-	name := r.FindAllStringSubmatch(str, -1)
-	// log.Println(name[0][0])
-	if len(name[0][0]) <= 1 {
+	re := regexp.MustCompile(`[^B]SSID:\s.*`)
+	name := strings.TrimPrefix(re.FindString(airport), " SSID: ")
+	if len(name) <= 1 {
 		return "Could not get SSID"
 	} else {
-		return name[0][0]
-	}
-}
-
-func panicIf(err error) {
-	if err != nil {
-		panic(err)
+		return name
 	}
 }
 
