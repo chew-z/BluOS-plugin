@@ -31,9 +31,9 @@ func init() {
 
 func main() {
 	blueWiFi := myConfig["BLUE_WIFI"]
-	bluePlayer := myConfig["BLUE_URL"]
-	statusUrl := fmt.Sprintf("%s/Status", bluePlayer)
-	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayer)
+	bluePlayerUrl := myConfig["BLUE_URL"]
+	statusUrl := fmt.Sprintf("%s/Status", bluePlayerUrl)
+	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayerUrl)
 
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
@@ -48,12 +48,19 @@ func main() {
 		var state StateXML
 		var icon string
 		xml.Unmarshal(xmlBytes, &state)
+		c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
+		cmd := bitbar.Cmd{
+			Bash:     "/usr/local/opt/curl/bin/curl",
+			Params:   []string{c},
+			Terminal: BoolPointer(false),
+			Refresh:  BoolPointer(false),
+		}
 		if state.State == "play" {
 			icon = ":play.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			app.StatusLine(l1).DropDown(true).Length(MAX)
+			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
 			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
 		} else if state.State == "stream" {
@@ -61,13 +68,14 @@ func main() {
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+
 			app.StatusLine(l1).DropDown(false).Length(MAX)
-			app.StatusLine(l2).DropDown(true).Length(MAX)
+			app.StatusLine(l2).DropDown(true).Length(MAX).Command(cmd)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
 		} else if state.State == "pause" {
 			icon = ":pause.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			app.StatusLine(l1).DropDown(false).Length(MAX)
+			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
 			icon = ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
@@ -82,8 +90,7 @@ func main() {
 		xml.Unmarshal(xmlBytes, &presets)
 		for _, p := range presets.Preset {
 			l := fmt.Sprintf("%s - %s", p.ID, p.Name)
-			c := fmt.Sprintf("%s/Preset?id=%s", bluePlayer, p.ID)
-			log.Println(c)
+			c := fmt.Sprintf("%s/Preset?id=%s", bluePlayerUrl, p.ID)
 			cmd := bitbar.Cmd{
 				Bash:     "/usr/local/opt/curl/bin/curl",
 				Params:   []string{c},
@@ -91,7 +98,6 @@ func main() {
 				Refresh:  BoolPointer(false),
 			}
 			submenu.Line(l).Command(cmd)
-			// log.Println(p.ID, p.Name)
 		}
 	}
 	goto AppRender
