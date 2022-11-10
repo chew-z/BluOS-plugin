@@ -34,12 +34,13 @@ func main() {
 	blueWiFi := myConfig["BLUE_WIFI"]
 	bluePlayer := myConfig["BLUE_URL"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayer)
+	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayer)
 
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
 	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		app.StatusLine(ssid)
-		app.StatusLine(":play.slash.fill:")
+		// app.StatusLine(ssid)
+		app.StatusLine(":play.slash.fill:").Color("red")
 		goto AppRender
 	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
@@ -47,22 +48,43 @@ func main() {
 		log.Printf("Failed to get XML: %v", err)
 	} else {
 		var state StateXML
+		var icon string
 		xml.Unmarshal(xmlBytes, &state)
-		l1 := fmt.Sprintf("[%s] %s", state.State, state.Title1)
-		l2 := fmt.Sprintf("%s", state.Title2)
-		l3 := fmt.Sprintf("%s", state.Title3)
-
-		app.StatusLine(l1)
-		app.StatusLine(l2)
-		app.StatusLine(l3)
-
-		m := fmt.Sprintf("[%s] %s - %s", state.Song, state.Secs, state.Service)
-		submenu.Line(m)
-		a := fmt.Sprintf("[%s] %s", state.StreamFormat, state.ServiceName)
-		submenu.Line(a).Alternate(true)
-		// submenu.Line(m).Href(quote.webURL).Color(color)
-		// submenu.Line(a).Alternate(true).Href(quote.webURL).Color(color)
-		// log.Printf("[%s] %s -- %s [%s]\n", state.State, state.Title2, state.ServiceName, state.StreamFormat)
+		if state.State == "play" {
+			icon = ":play.fill:"
+			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
+			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+			app.StatusLine(l1).DropDown(false)
+			app.StatusLine(l2).DropDown(false)
+			app.StatusLine(l3).DropDown(false)
+		} else if state.State == "stream" {
+			icon = ":play:"
+			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
+			app.StatusLine(l1).DropDown(false).Length(50)
+			app.StatusLine(l2).DropDown(false)
+		} else if state.State == "pause" {
+			icon = ":pause.fill:"
+			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+			app.StatusLine(l1).DropDown(false).Length(50)
+		} else if state.State == "stop" {
+			icon = ":stop.fill:"
+			l1 := fmt.Sprintf("%s %s", icon, state.State)
+			app.StatusLine(l1).DropDown(false).Length(50)
+		}
+	}
+	if xmlBytes, err := getXML(presetsUrl); err != nil {
+		submenu.Line(err.Error()).Color("red").Length(25)
+		log.Printf("Failed to get XML: %v", err)
+	} else {
+		var presets Presets
+		xml.Unmarshal(xmlBytes, &presets)
+		for _, p := range presets.Preset {
+			l := fmt.Sprintf("%s - %s", p.ID, p.Name)
+			submenu.Line(l)
+			// log.Println(p.ID, p.Name)
+		}
 	}
 	goto AppRender
 AppRender:
@@ -146,4 +168,17 @@ type StateXML struct {
 	Title3          string `xml:"title3"`
 	Volume          string `xml:"volume"`
 	Secs            string `xml:"secs"`
+}
+
+type Presets struct {
+	XMLName xml.Name `xml:"presets"`
+	Text    string   `xml:",chardata"`
+	Prid    string   `xml:"prid,attr"`
+	Preset  []struct {
+		Text  string `xml:",chardata"`
+		URL   string `xml:"url,attr"`
+		ID    string `xml:"id,attr"`
+		Name  string `xml:"name,attr"`
+		Image string `xml:"image,attr"`
+	} `xml:"preset"`
 }
