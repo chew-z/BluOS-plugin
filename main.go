@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
+	"regexp"
+	"strings"
 
 	"github.com/johnmccabe/go-bitbar"
 	"github.com/joho/godotenv"
@@ -14,6 +17,9 @@ import (
 
 var (
 	myConfig map[string]string
+	osxCmd   = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+	osxArgs  = "-I"
+	ssid     string
 )
 
 func init() {
@@ -25,11 +31,16 @@ func init() {
 }
 
 func main() {
-	// log.Println(myConfig)
+	log.Println(myConfig)
+	wifi := myConfig["WIFI"]
 	bluePlayer := myConfig["BLUE"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayer)
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
+	if ssid := getSSID(); !strings.Contains(ssid, wifi) {
+		app.StatusLine(ssid)
+		goto AppRender
+	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
 		submenu.Line(err.Error()).Color("red").Length(25)
 		log.Printf("Failed to get XML: %v", err)
@@ -75,6 +86,37 @@ func getXML(url string) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func getSSID() string {
+
+	cmd := exec.Command(osxCmd, osxArgs)
+	stdout, err := cmd.StdoutPipe()
+	panicIf(err)
+	// start the command after having set up the pipe
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	defer cmd.Wait()
+	var str string
+
+	if b, err := ioutil.ReadAll(stdout); err == nil {
+		str += (string(b) + "\n")
+	}
+	r := regexp.MustCompile(`s*SSID: (.+)s*`)
+	name := r.FindAllStringSubmatch(str, -1)
+	// log.Println(name[0][0])
+	if len(name[0][0]) <= 1 {
+		return "Could not get SSID"
+	} else {
+		return name[0][0]
+	}
+}
+
+func panicIf(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 type StateXML struct {
