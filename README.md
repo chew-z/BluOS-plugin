@@ -6,7 +6,7 @@ Simple bitbar (but rather modern [Swiftbar](https://github.com/swiftbar/SwiftBar
 
 ## What is does?
 
-First it check if you are on the same network as your BlueOS device. If your device is reachable plugin displays a state of your player (playing, paused, stoped) and what it is playing (radio, tracks).
+First plugin checks if you are on the same network as your BlueOS device. If your device is reachable plugin displays a state of your player (playing, paused, stoped) and what it is playing (radio, tracks).
 
 You can toggle play/pause. You can also see a list of your presets in dropdown menu and start one by clicking on it. If Option key (⌥) is pressed it will reveal current stream quality.
 
@@ -19,7 +19,7 @@ This project is currently work in progress. Yet.
 And it is being optimized for my personal use case of [BlueNode 2](https://www.bluesound.com/products/node-2/)
 
 -   streaming radio (mostly SomaFM stations) with TuneIn
--   streaming with Radio Paradise
+-   streaming radio with Radio Paradise
 -   playing albums with Amazon Music Unlimited
 -   audio output level set to fixed
 
@@ -28,3 +28,7 @@ BlueOS can do much more. So some use cases may have not been tested or optimized
 I am optimizing for later versions of [SwiftBar](https://github.com/swiftbar/SwiftBar) (1.44, 1.5) and [SF Symbols 4](https://developer.apple.com/sf-symbols/)
 
 BlueOS is not the fastest and the plugin is updated every 15 seconds, not everything refreshes instantly so please be patient.
+
+## Location of BlueOS device
+
+You need `.env` file at `SWIFTBAR_PLUGINS_PATH` where you specify WiFi network `BLUE_WIFI`and an IP address `BLUE_URL` where your BlueOS device can be found

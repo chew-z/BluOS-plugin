@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -23,7 +24,7 @@ var (
 
 func init() {
 	var err error
-	myConfig, err = godotenv.Read("/Users/rrj/Projekty/SwiftBar/.env")
+	myConfig, err = godotenv.Read(fmt.Sprintf("%s/.env", os.Getenv("SWIFTBAR_PLUGINS_PATH")))
 	if err != nil {
 		log.Fatalln("Error loading .env file")
 	}
@@ -38,7 +39,9 @@ func main() {
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
 	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		app.StatusLine(":waveform.slash:")
+		app.StatusLine(":antenna.radiowaves.left.and.right.slash:") // :waveform.slash:
+		submenu.Line(fmt.Sprintf("Connect to %s", blueWiFi))
+		submenu.Line(bluePlayerUrl).Alternate(true)
 		goto AppRender
 	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
