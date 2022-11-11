@@ -55,7 +55,7 @@ func main() {
 			Refresh:  BoolPointer(false),
 		}
 		if state.State == "play" {
-			icon := ":hifispeaker:"
+			icon := ":hifispeaker:" //TODO I would like to use :hifireceiver: here but no luck (SF symbols 4.0 ?)
 			icon2 := ":pause.fill:"
 			icon3 := ""
 			if state.Quality == "cd" {
@@ -89,9 +89,13 @@ func main() {
 			submenu.Line(s1).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
-			icon := ":play.fill:"
-			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
+			icon := ":pause.rectangle:"
+			icon2 := ":play.fill:"
+			l1 := fmt.Sprintf("%s %s", icon, state.Service)
+			s1 := fmt.Sprintf("%s %s", icon2, state.Title1)
+
+			app.StatusLine(l1).DropDown(false).Length(MAX).Command(cmd)
+			submenu.Line(s1).Command(cmd)
 		} else if state.State == "stop" {
 			icon := ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
