@@ -38,7 +38,7 @@ func main() {
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
 	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		app.StatusLine(":b.circle.fill:")
+		app.StatusLine(":waveform.slash:")
 		goto AppRender
 	}
 	if xmlBytes, err := getXML(statusUrl); err != nil {
@@ -46,7 +46,6 @@ func main() {
 		log.Printf("Failed to get XML: %v", err)
 	} else {
 		var state StateXML
-		var icon string
 		xml.Unmarshal(xmlBytes, &state)
 		c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
 		cmd := bitbar.Cmd{
@@ -56,28 +55,45 @@ func main() {
 			Refresh:  BoolPointer(false),
 		}
 		if state.State == "play" {
-			icon = ":play.fill:"
+			icon := ":hifispeaker:"
+			icon2 := ":play.fill:"
+			icon3 := ""
+			if state.Quality == "cd" {
+				icon3 = ":c.square::"
+			} else if state.Quality == "hd" {
+				icon3 = ":h.square:"
+			}
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
-			app.StatusLine(l2).DropDown(false).Length(MAX)
-			app.StatusLine(l3).DropDown(false).Length(MAX)
-		} else if state.State == "stream" {
-			icon = ":play:"
-			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
-			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+			s1 := fmt.Sprintf("%s %s %s", icon2, state.ServiceName, state.Name)
+			s2 := fmt.Sprintf("%s %s", icon3, state.StreamFormat)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
-			app.StatusLine(l2).DropDown(true).Length(MAX).Command(cmd)
+			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
+			submenu.Line(s1).Command(cmd)
+			submenu.Line(s2).Alternate(true)
+		} else if state.State == "stream" {
+			icon := ":radio:"
+			icon2 := ":play:"
+			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
+			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+			s1 := fmt.Sprintf("%s %s %s", icon2, state.ServiceName, state.Title3)
+			s2 := fmt.Sprintf("%s %s", state.StreamFormat)
+
+			app.StatusLine(l1).DropDown(false).Length(MAX)
+			app.StatusLine(l2).DropDown(false).Length(MAX).Command(cmd)
+			app.StatusLine(l3).DropDown(false).Length(MAX)
+			submenu.Line(s1).Command(cmd)
+			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
-			icon = ":pause.fill:"
+			icon := ":pause.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
-			icon = ":stop.fill:"
+			icon := ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
 			app.StatusLine(l1).DropDown(false)
 		}
@@ -166,6 +182,7 @@ type StateXML struct {
 	Mid             string `xml:"mid"`
 	Mode            string `xml:"mode"`
 	Mute            string `xml:"mute"`
+	Name            string `xml:"name,omitempty"`
 	Pid             string `xml:"pid"`
 	PresetID        string `xml:"preset_id"`
 	Prid            string `xml:"prid"`
