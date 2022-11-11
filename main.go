@@ -81,7 +81,7 @@ func main() {
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
 			s1 := fmt.Sprintf("%s %s %s", icon2, state.ServiceName, state.Title3)
-			s2 := fmt.Sprintf("%s %s", state.StreamFormat)
+			s2 := fmt.Sprintf("%s", state.StreamFormat)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 			app.StatusLine(l2).DropDown(false).Length(MAX).Command(cmd)
