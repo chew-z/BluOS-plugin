@@ -56,7 +56,7 @@ func main() {
 		}
 		if state.State == "play" {
 			icon := ":hifispeaker:"
-			icon2 := ":play.fill:"
+			icon2 := ":pause.fill:"
 			icon3 := ""
 			if state.Quality == "cd" {
 				icon3 = ":c.square::"
@@ -66,7 +66,7 @@ func main() {
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			s1 := fmt.Sprintf("%s %s %s", icon2, state.ServiceName, state.Name)
+			s1 := fmt.Sprintf("%s %s - %s", icon2, state.ServiceName, state.Name)
 			s2 := fmt.Sprintf("%s %s", icon3, state.StreamFormat)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
@@ -76,20 +76,20 @@ func main() {
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "stream" {
 			icon := ":radio:"
-			icon2 := ":play:"
+			icon2 := ":pause.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			s1 := fmt.Sprintf("%s %s %s", icon2, state.ServiceName, state.Title3)
+			s1 := fmt.Sprintf("%s %s - %s", icon2, state.ServiceName, state.Title3)
 			s2 := fmt.Sprintf("%s", state.StreamFormat)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
-			app.StatusLine(l2).DropDown(false).Length(MAX).Command(cmd)
+			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
 			submenu.Line(s1).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
-			icon := ":pause.fill:"
+			icon := ":play.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			app.StatusLine(l1).DropDown(true).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
