@@ -53,9 +53,9 @@ func main() {
 		c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
 		cmd := bitbar.Cmd{
 			Bash:     "/usr/local/opt/curl/bin/curl",
-			Params:   []string{c},
+			Params:   []string{"-sf", c},
 			Terminal: BoolPointer(false),
-			Refresh:  BoolPointer(false),
+			Refresh:  BoolPointer(true),
 		}
 		if state.State == "play" {
 			icon := ":hifispeaker:" //TODO I would like to use :hifireceiver: here but no luck (SF symbols 4.0 ?)
@@ -97,8 +97,8 @@ func main() {
 			l1 := fmt.Sprintf("%s %s", icon, state.Service)
 			s1 := fmt.Sprintf("%s %s", icon2, state.Title1)
 
-			app.StatusLine(l1).DropDown(false).Length(MAX).Command(cmd)
-			submenu.Line(s1).Command(cmd)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
+			submenu.Line(s1).Command(cmd).Command(cmd)
 		} else if state.State == "stop" {
 			icon := ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
@@ -116,9 +116,9 @@ func main() {
 			c := fmt.Sprintf("%s/Preset?id=%s", bluePlayerUrl, p.ID)
 			cmd := bitbar.Cmd{
 				Bash:     "/usr/local/opt/curl/bin/curl",
-				Params:   []string{c},
+				Params:   []string{"-sf", c},
 				Terminal: BoolPointer(false),
-				Refresh:  BoolPointer(false),
+				Refresh:  BoolPointer(true),
 			}
 			submenu.Line(l).Command(cmd)
 		}

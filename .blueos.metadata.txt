@@ -1,5 +1,5 @@
 # <bitbar.title>BlueOS.15s</bitbar.title>
-# <bitbar.version>v0.60</bitbar.version>
+# <bitbar.version>v0.80</bitbar.version>
 # <bitbar.author>chew-z</bitbar.author>
 # <bitbar.author.github>chew-z</bitbar.author.github>
 # <bitbar.desc>Status bar for BlueOS devices</bitbar.desc>
