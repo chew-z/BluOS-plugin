@@ -67,15 +67,15 @@ func main() {
 			if state.Shuffle == "1" {
 				icon = ":shuffle:"
 			}
-			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
-			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+			l1 := fmt.Sprintf("%s %s", icon, state.Name)
+			l2 := fmt.Sprintf("%s %s", icon, state.Album)
+			l3 := fmt.Sprintf("%s %s", icon, state.Artist)
 			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Name)
 			s2 := fmt.Sprintf("%s %s", state.Quality, state.StreamFormat)
 
-			app.StatusLine(l3).DropDown(false).Length(MAX)
-			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l1).DropDown(false).Length(MAX)
+			app.StatusLine(l2).DropDown(false).Length(MAX)
+			app.StatusLine(l3).DropDown(false).Length(MAX)
 			submenu.Line(s1).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "stream" {
@@ -88,26 +88,30 @@ func main() {
 			s2 := fmt.Sprintf("%s", state.StreamFormat)
 
 			app.StatusLine(l2).DropDown(false).Length(MAX)
-			app.StatusLine(l1).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
 			submenu.Line(s1).Length(MAX).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
 			icon := ":pause.rectangle:"
 			icon2 := ":play.fill:"
-			n := state.Title3
-			if state.Name != "" {
-				n = state.Name
-			}
-			l1 := fmt.Sprintf("%s %s", icon, n)
-			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, n)
+			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 			submenu.Line(s1).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
 			icon := ":stop.fill:"
+			icon2 := ":play.fill:"
+			c := fmt.Sprintf("%s/Play", bluePlayerUrl)
+			cmd.Params = []string{"-sf", c}
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
+
 			app.StatusLine(l1).DropDown(false).Length(MAX)
+			if state.Service != "" {
+				s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
+				submenu.Line(s1).Length(MAX).Command(cmd)
+			}
 		}
 	}
 	if xmlBytes, err := getXML(presetsUrl); err != nil {
@@ -182,8 +186,22 @@ func BoolPointer(b bool) *bool {
 }
 
 type StateXML struct {
-	Text            string `xml:",chardata"`
-	Etag            string `xml:"etag,attr"`
+	Text    string `xml:",chardata"`
+	Etag    string `xml:"etag,attr"`
+	Actions struct {
+		Text   string `xml:",chardata"`
+		Action []struct {
+			Text     string `xml:",chardata"`
+			Name     string `xml:"name,attr"`
+			URL      string `xml:"url,attr"`
+			Icon     string `xml:"icon,attr"`
+			State    string `xml:"state,attr"`
+			AttrText string `xml:"text,attr"`
+			Type     string `xml:"type,attr"`
+		} `xml:"action"`
+	} `xml:"actions,omitempty"`
+	Album           string `xml:"album,omitempty"`
+	Artist          string `xml:"artist,omitempty"`
 	CanMovePlayback string `xml:"canMovePlayback"`
 	CanSeek         string `xml:"canSeek"`
 	CurrentImage    string `xml:"currentImage"`

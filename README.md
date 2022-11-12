@@ -16,7 +16,7 @@ That's it at the moment.
 
 This project is currently work in progress. Yet.
 
-And it is being optimized for my personal use case of [BlueNode 2](https://www.bluesound.com/products/node-2/)
+And it is being optimized for my personal use case of [Bluesound Node](https://www.bluesound.com/products/node/)
 
 -   streaming radio (mostly SomaFM stations) with TuneIn
 -   streaming radio with Radio Paradise
