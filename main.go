@@ -57,24 +57,25 @@ func main() {
 			Terminal: BoolPointer(false),
 			Refresh:  BoolPointer(true),
 		}
-		if state.State == "play" {
-			icon := ":hifispeaker:" //TODO I would like to use :hifireceiver: here but no luck (SF symbols 4.0 ?)
+		if state.State == "connecting" {
+			icon := ":dot.radiowaves.left.and.right:"
+			l1 := fmt.Sprintf("%s connecting", icon)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
+		} else if state.State == "play" {
+			icon := ":music.note.list:"
 			icon2 := ":pause.fill:"
-			icon3 := ""
-			if state.Quality == "cd" {
-				icon3 = ":c.square::"
-			} else if state.Quality == "hd" {
-				icon3 = ":h.square:"
+			if state.Shuffle == "1" {
+				icon = ":shuffle:"
 			}
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			s1 := fmt.Sprintf("%s %s - %s", icon2, state.ServiceName, state.Name)
-			s2 := fmt.Sprintf("%s %s", icon3, state.StreamFormat)
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Name)
+			s2 := fmt.Sprintf("%s %s", state.Quality, state.StreamFormat)
 
-			app.StatusLine(l1).DropDown(false).Length(MAX)
-			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
+			app.StatusLine(l2).DropDown(false).Length(MAX)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
 			submenu.Line(s1).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "stream" {
@@ -83,26 +84,30 @@ func main() {
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
 			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			s1 := fmt.Sprintf("%s %s - %s", icon2, state.ServiceName, state.Title3)
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title3)
 			s2 := fmt.Sprintf("%s", state.StreamFormat)
 
-			app.StatusLine(l1).DropDown(false).Length(MAX)
 			app.StatusLine(l2).DropDown(false).Length(MAX)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
-			submenu.Line(s1).Command(cmd)
+			submenu.Line(s1).Length(MAX).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
 			icon := ":pause.rectangle:"
 			icon2 := ":play.fill:"
-			l1 := fmt.Sprintf("%s %s", icon, state.Service)
-			s1 := fmt.Sprintf("%s %s", icon2, state.Title1)
+			n := state.Title3
+			if state.Name != "" {
+				n = state.Name
+			}
+			l1 := fmt.Sprintf("%s %s", icon, n)
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, n)
 
 			app.StatusLine(l1).DropDown(false).Length(MAX)
-			submenu.Line(s1).Command(cmd).Command(cmd)
+			submenu.Line(s1).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
 			icon := ":stop.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
-			app.StatusLine(l1).DropDown(false)
+			app.StatusLine(l1).DropDown(false).Length(MAX)
 		}
 	}
 	if xmlBytes, err := getXML(presetsUrl); err != nil {
