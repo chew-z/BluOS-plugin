@@ -93,7 +93,7 @@ func main() {
 			submenu.Line(s1).Length(MAX).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
-			icon := ":pause.rectangle:"
+			icon := ":pause.fill:"
 			icon2 := ":play.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
