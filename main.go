@@ -52,7 +52,7 @@ func main() {
 		xml.Unmarshal(xmlBytes, &state)
 		c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
 		cmd := bitbar.Cmd{
-			Bash:     "/usr/local/opt/curl/bin/curl",
+			Bash:     "curl",
 			Params:   []string{"-sf", c},
 			Terminal: BoolPointer(false),
 			Refresh:  BoolPointer(true),
@@ -124,7 +124,7 @@ func main() {
 			l := fmt.Sprintf("%s - %s", p.ID, p.Name)
 			c := fmt.Sprintf("%s/Preset?id=%s", bluePlayerUrl, p.ID)
 			cmd := bitbar.Cmd{
-				Bash:     "/usr/local/opt/curl/bin/curl",
+				Bash:     "curl",
 				Params:   []string{"-sf", c},
 				Terminal: BoolPointer(false),
 				Refresh:  BoolPointer(true),
