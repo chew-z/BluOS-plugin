@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/DexterLB/mpvipc"
@@ -18,9 +19,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-const MAX = 40
-
 var (
+	MAX      = 40
 	myConfig map[string]string
 	TMP      = os.Getenv("TMPDIR")
 )
@@ -34,6 +34,9 @@ func init() {
 }
 
 func main() {
+	if m, e := strconv.Atoi(myConfig["MAX"]); e == nil {
+		MAX = m
+	}
 	blueWiFi := myConfig["BLUE_WIFI"]
 	bluePlayerUrl := myConfig["BLUE_URL"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayerUrl)
