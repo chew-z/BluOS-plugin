@@ -86,6 +86,8 @@ func main() {
 			icon2 := ":pause.fill:"
 			if state.Service == "AirPlay" {
 				icon = ":airplayaudio:"
+			} else if state.Service == "Spotify" {
+				icon = ":music.note.tv.fill:"
 			} else {
 				icon = ":radio:"
 			}
@@ -104,8 +106,10 @@ func main() {
 			s2 := t4
 
 			app.StatusLine(l2).DropDown(false).Length(MAX)
-			app.StatusLine(l3).DropDown(false).Length(MAX)
 			app.StatusLine(l1).DropDown(false).Length(MAX)
+			if state.Service != "Spotify" {
+				app.StatusLine(l3).DropDown(false).Length(MAX)
+			}
 			submenu.Line(s1).Length(MAX).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
@@ -152,6 +156,10 @@ func main() {
 AppRender:
 	app.Render()
 }
+
+// mpv() - mpv is above providing essential 'now playing' info to anyone
+// so we must read it from ipc socket (that must be configured and running)
+// https://mpv.io/manual/master/#json-ipc
 func mpv() (string, string, string, string) {
 	var t1, t2, t3, t4 string
 	socketPath := fmt.Sprintf("%s/mpv_socket", TMP)
@@ -179,7 +187,12 @@ func mpv() (string, string, string, string) {
 		if m["artist"] != nil {
 			t2 = m["artist"].(string)
 		}
-
+		if m["Title"] != nil {
+			t1 = m["Title"].(string)
+		}
+		if m["Artist"] != nil {
+			t2 = m["Artist"].(string)
+		}
 		if m["TITLE"] != nil {
 			t1 = m["TITLE"].(string)
 		}
