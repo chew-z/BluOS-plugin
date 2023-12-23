@@ -5,21 +5,24 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
+	"github.com/DexterLB/mpvipc"
 	"github.com/johnmccabe/go-bitbar"
 	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
 )
 
-const MAX = 50
+const MAX = 40
 
 var (
 	myConfig map[string]string
+	TMP      = os.Getenv("TMPDIR")
 )
 
 func init() {
@@ -39,7 +42,7 @@ func main() {
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
 	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		app.StatusLine(":antenna.radiowaves.left.and.right.slash:") // :waveform.slash:
+		app.StatusLine(":network.slash:") // :waveform.slash:
 		submenu.Line(fmt.Sprintf("Connect to %s", blueWiFi))
 		submenu.Line(bluePlayerUrl).Alternate(true)
 		goto AppRender
@@ -58,7 +61,7 @@ func main() {
 			Refresh:  BoolPointer(true),
 		}
 		if state.State == "connecting" {
-			icon := ":dot.radiowaves.left.and.right:"
+			icon := ":powercord:"
 			l1 := fmt.Sprintf("%s connecting", icon)
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 		} else if state.State == "play" {
@@ -79,13 +82,26 @@ func main() {
 			submenu.Line(s1).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "stream" {
-			icon := ":radio:"
+			var icon string
 			icon2 := ":pause.fill:"
-			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-			l2 := fmt.Sprintf("%s %s", icon, state.Title2)
-			l3 := fmt.Sprintf("%s %s", icon, state.Title3)
-			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title3)
-			s2 := fmt.Sprintf("%s", state.StreamFormat)
+			if state.Service == "AirPlay" {
+				icon = ":airplayaudio:"
+			} else {
+				icon = ":radio:"
+			}
+			t1 := state.Title1
+			t2 := state.Title2
+			t3 := state.Title3
+			t4 := state.StreamFormat
+
+			if t1 == "mpv" && t2 == "mpv" {
+				t1, t2, t3, t4 = mpv()
+			}
+			l1 := fmt.Sprintf("%s %s", icon, t1)
+			l2 := fmt.Sprintf("%s %s", icon, t2)
+			l3 := fmt.Sprintf("%s %s", icon, t3)
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, t3)
+			s2 := t4
 
 			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l3).DropDown(false).Length(MAX)
@@ -135,6 +151,69 @@ func main() {
 	goto AppRender
 AppRender:
 	app.Render()
+}
+func mpv() (string, string, string, string) {
+	var t1, t2, t3, t4 string
+	socketPath := fmt.Sprintf("%s/mpv_socket", TMP)
+	conn := mpvipc.NewConnection(socketPath)
+	err := conn.Open()
+	if err != nil {
+		log.Println(err.Error())
+	}
+	defer conn.Close()
+	if prop, err := conn.Get("filtered-metadata"); err != nil {
+		log.Println(err.Error())
+	} else {
+		// log.Printf("playing: %v", prop)
+		m := prop.(map[string]interface{})
+		// log.Printf("playing: %s", m["icy-title"])
+		if m["icy-title"] != nil {
+			t1 = m["icy-title"].(string)
+		}
+		if m["icy-name"] != nil {
+			t2 = m["icy-name"].(string)
+		}
+		if m["title"] != nil {
+			t1 = m["title"].(string)
+		}
+		if m["artist"] != nil {
+			t2 = m["artist"].(string)
+		}
+
+		if m["TITLE"] != nil {
+			t1 = m["TITLE"].(string)
+		}
+		if m["ARTIST"] != nil {
+			t2 = m["ARTIST"].(string)
+		}
+	}
+	if prop, err := conn.Get("volume"); err != nil {
+		log.Println(err.Error())
+	} else {
+		// log.Printf("playing: %v", prop)
+		dB := vol2db(prop.(float64))
+		t3 = fmt.Sprintf("mpv: %.0f dB", dB)
+	}
+	if prop, err := conn.Get("audio-codec-name"); err != nil {
+		log.Println(err.Error())
+	} else {
+		// log.Printf("playing: %v", prop)
+		t4 += fmt.Sprintf("codec: %s", prop.(string))
+	}
+	if prop, err := conn.Get("audio-params/samplerate"); err != nil {
+		log.Println(err.Error())
+	} else {
+		// log.Printf("playing: %v", prop)
+		t4 += fmt.Sprintf(" samplerate: %.0f", prop.(float64))
+	}
+
+	return t1, t2, t3, t4
+}
+
+// assumes samples are multiplied by (vol/100)^3
+// https://github.com/mpv-player/mpv/blob/master/player/audio.c#L161
+func vol2db(vol float64) float64 {
+	return 60.0 * math.Log(vol/100.0) / math.Log(10.0)
 }
 
 // tweaked from: https://stackoverflow.com/a/42718113/1170664
