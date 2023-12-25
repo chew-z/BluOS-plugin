@@ -69,10 +69,10 @@ func main() {
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 		} else if state.State == "play" {
 			icon := ":music.note.list:"
-			icon2 := ":pause.fill:"
 			if state.Shuffle == "1" {
 				icon = ":shuffle:"
 			}
+			icon2 := ":pause.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Name)
 			l2 := fmt.Sprintf("%s %s", icon, state.Album)
 			l3 := fmt.Sprintf("%s %s", icon, state.Artist)
@@ -86,33 +86,47 @@ func main() {
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "stream" {
 			var icon string
-			icon2 := ":pause.fill:"
 			if state.Service == "AirPlay" {
 				icon = ":airplayaudio:"
 			} else if state.Service == "Spotify" {
-				icon = ":music.note.tv.fill:"
+				icon = ":music.note.tv:"
 			} else {
 				icon = ":radio:"
 			}
+			icon2 := ":pause.fill:"
+			
 			t1 := state.Title1
 			t2 := state.Title2
 			t3 := state.Title3
 			t4 := state.StreamFormat
-
 			if t1 == "mpv" && t2 == "mpv" {
 				t1, t2, t3, t4 = mpv()
+			}
+			if state.Service == "AirPlay" {
+				if state.Mute == "0" {
+					c = fmt.Sprintf("%s/Volume?mute=1", bluePlayerUrl)
+					icon2 = ":speaker.zzz:"
+				} else if state.Mute == "1" {
+					c = fmt.Sprintf("%s/Volume?mute=0", bluePlayerUrl)
+					icon2 = ":speaker.slash:"
+				}
+				cmd = bitbar.Cmd{
+					Bash:     "curl",
+					Params:   []string{"-sf", c},
+					Terminal: BoolPointer(false),
+					Refresh:  BoolPointer(true),
+				}
 			}
 			l1 := fmt.Sprintf("%s %s", icon, t1)
 			l2 := fmt.Sprintf("%s %s", icon, t2)
 			l3 := fmt.Sprintf("%s %s", icon, t3)
-			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, t3)
-			s2 := t4
-
 			app.StatusLine(l2).DropDown(false).Length(MAX)
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 			if state.Service != "Spotify" {
 				app.StatusLine(l3).DropDown(false).Length(MAX)
 			}
+			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, t3)
+			s2 := t4
 			submenu.Line(s1).Length(MAX).Command(cmd)
 			submenu.Line(s2).Alternate(true)
 		} else if state.State == "pause" {
@@ -120,7 +134,6 @@ func main() {
 			icon2 := ":play.fill:"
 			l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
-
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 			submenu.Line(s1).Length(MAX).Command(cmd)
 		} else if state.State == "stop" {
