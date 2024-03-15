@@ -1,6 +1,6 @@
 module BlueOS
 
-go 1.21.5
+go 1.22.1
 
 require (
 	github.com/DexterLB/mpvipc v0.0.0-20230829142118-145d6eabdc37

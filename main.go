@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -94,7 +93,7 @@ func main() {
 				icon = ":radio:"
 			}
 			icon2 := ":pause.fill:"
-			
+
 			t1 := state.Title1
 			t2 := state.Title2
 			t3 := state.Title3
@@ -142,7 +141,6 @@ func main() {
 			c := fmt.Sprintf("%s/Play", bluePlayerUrl)
 			cmd.Params = []string{"-sf", c}
 			l1 := fmt.Sprintf("%s %s", icon, state.State)
-
 			app.StatusLine(l1).DropDown(false).Length(MAX)
 			if state.Service != "" {
 				s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
@@ -267,8 +265,8 @@ func getXML(url string) ([]byte, error) {
 
 func getSSID() string {
 
-	const osxCmd = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-	const osxArgs = "-I"
+	const osxCmd = "/usr/bin/osascript"
+	const osxArgs = "/Users/rrj/Projekty/AppleScript/SSID.applescript"
 	cmd := exec.Command(osxCmd, osxArgs)
 	stdout, _ := cmd.StdoutPipe()
 	if err := cmd.Start(); err != nil {
@@ -278,15 +276,9 @@ func getSSID() string {
 
 	var airport string
 	if b, err := ioutil.ReadAll(stdout); err == nil {
-		airport += (string(b) + "\n")
+		airport += (string(b))
 	}
-	re := regexp.MustCompile(`[^B]SSID:\s.*`)
-	name := strings.TrimPrefix(re.FindString(airport), " SSID: ")
-	if len(name) <= 1 {
-		return "Could not get SSID"
-	} else {
-		return name
-	}
+	return airport
 }
 
 func BoolPointer(b bool) *bool {
@@ -340,6 +332,7 @@ type StateXML struct {
 	Title1          string `xml:"title1"`
 	Title2          string `xml:"title2"`
 	Title3          string `xml:"title3"`
+	Totlen          string `xml:"totlen,omitempty"`
 	Volume          string `xml:"volume"`
 	Secs            string `xml:"secs"`
 }
