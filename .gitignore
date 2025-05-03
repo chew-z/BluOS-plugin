@@ -5,3 +5,4 @@ go.sum
 *.json
 bin/**
 system_prompt.txt
+*.log

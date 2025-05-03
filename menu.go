@@ -9,8 +9,9 @@ import (
 	"github.com/johnmccabe/go-bitbar"
 )
 
-// createMainMenu builds the main menu structure based on player state and volume info
-func createMainMenu(app bitbar.Plugin, bluePlayerUrl string) {
+// buildPlayerMenu builds the main menu structure based on player state and volume info
+func buildPlayerMenu(app bitbar.Plugin, bluePlayerUrl string) {
+	log.Printf("Building player menu for %s", bluePlayerUrl)
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayerUrl)
 	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayerUrl)
 	volumeUrl := fmt.Sprintf("%s/Volume", bluePlayerUrl)
@@ -44,10 +45,13 @@ func createMainMenu(app bitbar.Plugin, bluePlayerUrl string) {
 	
 	// Add audio information to advanced submenu if player is active
 	addAudioInfo(advancedSubmenu, statusUrl)
+
+	log.Printf("Menu building completed")
 }
 
 // createStatusDisplay adds the status bar display based on player state
 func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, bluePlayerUrl string) {
+	log.Printf("Creating status display")
 	xmlBytes, err := getXML(statusUrl)
 	if err != nil {
 		submenu.Line(err.Error()).Color("red").Length(MAX)
@@ -61,6 +65,10 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 		log.Printf("Failed to parse status XML: %v", err)
 		return
 	}
+	
+	// Log player state information
+	log.Printf("Player state: %s, Service: %s", state.State, state.Service)
+	log.Printf("Titles: '%s', '%s', '%s'", state.Title1, state.Title2, state.Title3)
 	
 	c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
 	cmd := createCommand(c)
@@ -96,6 +104,9 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 			icon = ":airplayaudio:"
 		} else if state.Service == "Spotify" {
 			icon = ":music.note.tv:"
+		} else if state.Service == "Capture" {
+			icon = ":tv:"
+			log.Printf("Found Capture service (HDMI ARC)")
 		} else {
 			icon = ":radio:"
 		}
@@ -128,6 +139,8 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 		s2 := t4
 		submenu.Line(s1).Length(MAX).Command(cmd)
 		submenu.Line(s2).Alternate(true)
+		
+		log.Printf("Created status display for stream state (service: %s)", state.Service)
 
 	case "pause":
 		icon := ":pause.fill:"
@@ -148,6 +161,19 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
 			submenu.Line(s1).Length(MAX).Command(cmd)
 		}
+		log.Printf("Created status display for stop state")
+	
+	default:
+		log.Printf("Unhandled player state: %s", state.State)
+		
+		// Add a generic display for unhandled states
+		icon := ":questionmark.circle:"
+		l1 := fmt.Sprintf("%s %s", icon, state.State)
+		app.StatusLine(l1).DropDown(false).Length(MAX)
+		submenu.Line(fmt.Sprintf("State: %s", state.State))
+		submenu.Line(fmt.Sprintf("Service: %s", state.Service))
+		submenu.Line(fmt.Sprintf("Title: %s", state.Title1))
+		log.Printf("Created generic status display")
 	}
 }
 
@@ -168,17 +194,24 @@ func addRadioPresets(submenu *bitbar.SubMenu, presetsUrl, bluePlayerUrl string) 
 	}
 	
 	// Add presets directly to the main menu
+	log.Printf("Adding %d radio presets", len(presets.Preset))
 	for _, p := range presets.Preset {
-		l := fmt.Sprintf("%s - %s", p.ID, p.Name)
+		// Use a radio icon 📻 for each preset
+		l := fmt.Sprintf("📻 %s - %s", p.ID, p.Name)
 		c := fmt.Sprintf("%s/Preset?id=%s", bluePlayerUrl, p.ID)
 		cmd := createCommand(c)
 		submenu.Line(l).Command(cmd)
+	}
+	
+	if len(presets.Preset) == 0 {
+		submenu.Line("No presets found").Color("gray")
 	}
 }
 
 // addVolumeInfo adds volume information to the menu
 // Returns the parsed volume status for use in other sections
 func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
+	log.Printf("Getting volume info")
 	xmlBytes, err := getXML(volumeUrl)
 	if err != nil {
 		submenu.Line("⚠️ Could not get volume").Color("red")
@@ -193,13 +226,28 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 		return nil
 	}
 	
+	log.Printf("Current volume: %d%%, %.1f dB, Muted: %v", volStatus.Level, volStatus.Db, volStatus.Mute == 1)
+	
 	// Display volume information - dB as primary, percentage as alternate
 	if volStatus.Mute == 1 {
-		submenu.Line(fmt.Sprintf("🔇 Volume: %.1f dB (Muted)", volStatus.Db))
-		submenu.Line(fmt.Sprintf("🔇 Volume: %d%% (Muted)", volStatus.Level)).Alternate(true)
+		// For muted state, show in red
+		submenu.Line(fmt.Sprintf("🔇 Volume: %.1f dB (Muted)", volStatus.Db)).Color("red")
+		submenu.Line(fmt.Sprintf("🔇 Volume: %d%% (Muted)", volStatus.Level)).Alternate(true).Color("red")
 	} else {
-		submenu.Line(fmt.Sprintf("🔊 Volume: %.1f dB", volStatus.Db))
-		submenu.Line(fmt.Sprintf("🔊 Volume: %d%%", volStatus.Level)).Alternate(true)
+		// For active state, use color based on volume level
+		volColor := ""  // default color
+		if volStatus.Level > 85 {
+			volColor = "red"
+		} else if volStatus.Level > 60 {
+			volColor = "orange"
+		} else if volStatus.Level > 30 {
+			volColor = "blue"
+		} else {
+			volColor = "green"
+		}
+		
+		submenu.Line(fmt.Sprintf("🔊 Volume: %.1f dB", volStatus.Db)).Color(volColor)
+		submenu.Line(fmt.Sprintf("🔊 Volume: %d%%", volStatus.Level)).Alternate(true).Color(volColor)
 	}
 	
 	return &volStatus
@@ -210,6 +258,8 @@ func addVolumePresets(submenu *bitbar.SubMenu, bluePlayerUrl string, volStatus *
 	if volStatus == nil {
 		return
 	}
+	
+	log.Printf("Adding volume presets")
 	
 	// Volume presets in descending order
 	volumePresets := []struct {
@@ -222,9 +272,16 @@ func addVolumePresets(submenu *bitbar.SubMenu, bluePlayerUrl string, volStatus *
 		{"🔈 Low (20%)", 20},
 	}
 	
+	// Highlight the current preset that's closest to the current volume
+	currentVol := volStatus.Level
 	for _, preset := range volumePresets {
 		presetCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"level": strconv.Itoa(preset.Level)})
-		submenu.Line(preset.Label).Command(presetCmd)
+		line := submenu.Line(preset.Label).Command(presetCmd)
+		
+		// Highlight if this is the active preset (within 5%)
+		if preset.Level-5 <= currentVol && currentVol <= preset.Level+5 {
+			line.Color("blue")
+		}
 	}
 }
 

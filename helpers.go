@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/johnmccabe/go-bitbar"
 )
@@ -118,21 +119,32 @@ func vol2db(vol float64) float64 {
 
 // tweaked from: https://stackoverflow.com/a/42718113/1170664
 func getXML(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	log.Printf("Fetching XML from: %s", url)
+	
+	// Set timeout for requests
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	
+	resp, err := client.Get(url)
 	if err != nil {
+		log.Printf("Error connecting to %s: %v", url, err)
 		return []byte{}, fmt.Errorf("GET error: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("Bad status code from %s: %d", url, resp.StatusCode)
 		return []byte{}, fmt.Errorf("Status error: %v", resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Printf("Error reading response body from %s: %v", url, err)
 		return []byte{}, fmt.Errorf("Read body: %v", err)
 	}
 
+	log.Printf("Successfully retrieved %d bytes from %s", len(data), url)
 	return data, nil
 }
 
