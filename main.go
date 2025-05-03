@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/johnmccabe/go-bitbar"
 	"github.com/joho/godotenv"
@@ -46,9 +47,6 @@ func main() {
 	
 	// Create BitBar app
 	app := bitbar.New()
-	
-	// Minimal fallback status line
-	app.StatusLine("").DropDown(false)
 	submenu := app.NewSubMenu()
 	
 	// Try to contact the player
@@ -100,18 +98,36 @@ func main() {
 				icon = ":questionmark.circle.fill:"
 			}
 			
-			// Use a single, concise status line
-			app.StatusLine(fmt.Sprintf("%s %s", icon, state.Title1)).DropDown(false).Length(MAX)
-			
-			// Add dropdown details conditionally
-			submenu.Line(fmt.Sprintf("State: %s", state.State))
-			
-			if state.Title1 != "" {
-				submenu.Line(fmt.Sprintf("Title: %s", state.Title1)).Length(50)
+			// Collect potential titles for menu bar
+			potentialTitles := []string{
+				state.Title1,    // First title
+				state.Title2,    // Second title (album, artist, etc.)
+				state.Title3,    // Third title (optional additional info)
 			}
-			
-			if state.ServiceName != "" {
-				submenu.Line(fmt.Sprintf("Service: %s", state.ServiceName))
+
+			// Filter out empty or whitespace-only titles
+			var nonEmptyTitles []string
+			for _, title := range potentialTitles {
+				trimmedTitle := strings.TrimSpace(title)
+				if trimmedTitle != "" {
+					nonEmptyTitles = append(nonEmptyTitles, trimmedTitle)
+				}
+			}
+
+			// Fallback if no titles are available
+			if len(nonEmptyTitles) == 0 {
+				nonEmptyTitles = []string{fmt.Sprintf("%s %s", state.State, state.ServiceName)}
+			}
+
+			// Display menu bar lines
+			for i, title := range nonEmptyTitles {
+				if i == 0 {
+					// First line gets the icon
+					app.StatusLine(fmt.Sprintf("%s %s", icon, title)).Length(MAX).DropDown(false)
+				} else {
+					// Subsequent lines
+					app.StatusLine(title).Length(MAX).DropDown(false)
+				}
 			}
 			
 			// Add play/pause control with SF Symbol icons
@@ -125,6 +141,29 @@ func main() {
 				playCmd := createCommand(fmt.Sprintf("%s/Play", bluePlayerUrl))
 				submenu.Line(":play.circle.fill: Play").Command(playCmd)
 			}
+			
+			// Combine State and Service as a single alternate line
+			var alternateInfo string
+			if state.ServiceName != "" {
+				alternateInfo = fmt.Sprintf("State: %s - Service: %s", state.State, state.ServiceName)
+			} else {
+				alternateInfo = fmt.Sprintf("State: %s", state.State)
+			}
+			submenu.Line(alternateInfo).Alternate(true)
+			
+			// Fine volume control as alternate lines
+			submenu.Line(":speaker.wave.3.fill: Volume Up 1dB").Alternate(true).Command(
+				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "1.0"}),
+			)
+			submenu.Line(":speaker.wave.1.fill: Volume Down 1dB").Alternate(true).Command(
+				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-1.0"}),
+			)
+			submenu.Line(":speaker.wave.2.fill: Volume Up 0.5dB").Alternate(true).Command(
+				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "0.5"}),
+			)
+			submenu.Line(":speaker.wave.2.fill: Volume Down 0.5dB").Alternate(true).Command(
+				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-0.5"}),
+			)
 		}
 		
 		// Add radio presets
@@ -184,7 +223,6 @@ func main() {
 				}
 				
 				// Add mute toggle
-				submenu.Line("---")
 				if volStatus.Mute == 1 {
 					unmuteCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"mute": "0"})
 					submenu.Line(":speaker.wave.2.fill: Unmute").Command(unmuteCmd)
