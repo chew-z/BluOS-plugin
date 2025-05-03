@@ -4,3 +4,4 @@ go.sum
 .env
 *.json
 bin/**
+system_prompt.txt
