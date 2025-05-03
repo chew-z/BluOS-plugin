@@ -76,21 +76,21 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 	// Handle different states
 	switch state.State {
 	case "connecting":
-		icon := ":powercord:"
+		icon := ":bolt.fill:"
 		l1 := fmt.Sprintf("%s connecting", icon)
 		app.StatusLine(l1).DropDown(false).Length(MAX)
 
 	case "play":
-		icon := ":music.note.list:"
+		icon := ":play.circle.fill:"
 		if state.Shuffle == "1" {
-			icon = ":shuffle:"
+			icon = ":shuffle.circle.fill:"
 		}
-		icon2 := ":pause.fill:"
+		icon2 := ":pause.circle.fill:"
 		l1 := fmt.Sprintf("%s %s", icon, state.Name)
 		l2 := fmt.Sprintf("%s %s", icon, state.Album)
 		l3 := fmt.Sprintf("%s %s", icon, state.Artist)
 		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Name)
-		s2 := fmt.Sprintf("%s %s", state.Quality, state.StreamFormat)
+		s2 := fmt.Sprintf("%s %s", ":music.note.list:", state.Quality)
 
 		app.StatusLine(l1).DropDown(false).Length(MAX)
 		app.StatusLine(l2).DropDown(false).Length(MAX)
@@ -103,14 +103,14 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 		if state.Service == "AirPlay" {
 			icon = ":airplayaudio:"
 		} else if state.Service == "Spotify" {
-			icon = ":music.note.tv:"
+			icon = ":music.note.list:"
 		} else if state.Service == "Capture" {
-			icon = ":tv:"
+			icon = ":display:"
 			log.Printf("Found Capture service (HDMI ARC)")
 		} else {
-			icon = ":radio:"
+			icon = ":radio.fill:"
 		}
-		icon2 := ":pause.fill:"
+		icon2 := ":pause.circle.fill:"
 
 		t1 := state.Title1
 		t2 := state.Title2
@@ -120,10 +120,10 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 		if state.Service == "AirPlay" {
 			if state.Mute == "0" {
 				c = fmt.Sprintf("%s/Volume?mute=1", bluePlayerUrl)
-				icon2 = ":speaker.zzz:"
+				icon2 = ":speaker.wave.1.fill:"
 			} else if state.Mute == "1" {
 				c = fmt.Sprintf("%s/Volume?mute=0", bluePlayerUrl)
-				icon2 = ":speaker.slash:"
+				icon2 = ":speaker.slash.fill:"
 			}
 			cmd = createCommand(c)
 		}
@@ -139,20 +139,20 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 		s2 := t4
 		submenu.Line(s1).Length(MAX).Command(cmd)
 		submenu.Line(s2).Alternate(true)
-		
+	
 		log.Printf("Created status display for stream state (service: %s)", state.Service)
 
 	case "pause":
-		icon := ":pause.fill:"
-		icon2 := ":play.fill:"
+		icon := ":pause.circle.fill:"
+		icon2 := ":play.circle.fill:"
 		l1 := fmt.Sprintf("%s %s", icon, state.Title1)
 		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
 		app.StatusLine(l1).DropDown(false).Length(MAX)
 		submenu.Line(s1).Length(MAX).Command(cmd)
 
 	case "stop":
-		icon := ":stop.fill:"
-		icon2 := ":play.fill:"
+		icon := ":stop.circle.fill:"
+		icon2 := ":play.circle.fill:"
 		c := fmt.Sprintf("%s/Play", bluePlayerUrl)
 		cmd = createCommand(c)
 		l1 := fmt.Sprintf("%s %s", icon, state.State)
@@ -162,12 +162,12 @@ func createStatusDisplay(app bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, 
 			submenu.Line(s1).Length(MAX).Command(cmd)
 		}
 		log.Printf("Created status display for stop state")
-	
+
 	default:
 		log.Printf("Unhandled player state: %s", state.State)
-		
+	
 		// Add a generic display for unhandled states
-		icon := ":questionmark.circle:"
+		icon := ":questionmark.circle.fill:"
 		l1 := fmt.Sprintf("%s %s", icon, state.State)
 		app.StatusLine(l1).DropDown(false).Length(MAX)
 		submenu.Line(fmt.Sprintf("State: %s", state.State))
