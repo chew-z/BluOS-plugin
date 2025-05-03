@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -21,6 +22,102 @@ var (
 	TMP      = os.Getenv("TMPDIR")
 )
 
+const defaultDbStep = 2.0 // Typical dB step for volume up/down
+
+// sendVolumeCommand sends a command to the /Volume endpoint with parameters
+func sendVolumeCommand(playerUrl string, params map[string]string) (*VolumeStatus, error) {
+	baseURL := fmt.Sprintf("%s/Volume", playerUrl)
+	reqURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing base URL %s: %w", baseURL, err)
+	}
+
+	query := reqURL.Query()
+	for key, value := range params {
+		query.Set(key, value)
+	}
+	reqURL.RawQuery = query.Encode()
+
+	xmlBytes, err := getXML(reqURL.String())
+	if err != nil {
+		return nil, fmt.Errorf("volume command failed: %w", err)
+	}
+
+	var status VolumeStatus
+	if err := xml.Unmarshal(xmlBytes, &status); err != nil {
+		log.Printf("Failed to parse volume XML: %v\nXML: %s", err, string(xmlBytes))
+		return nil, fmt.Errorf("XML parsing error: %w", err)
+	}
+
+	return &status, nil
+}
+
+// VolumeUp increases the volume by the default dB step
+func VolumeUp(playerUrl string) (*VolumeStatus, error) {
+	params := map[string]string{
+		"db": fmt.Sprintf("%.1f", defaultDbStep),
+	}
+	return sendVolumeCommand(playerUrl, params)
+}
+
+// VolumeDown decreases the volume by the default dB step
+func VolumeDown(playerUrl string) (*VolumeStatus, error) {
+	params := map[string]string{
+		"db": fmt.Sprintf("%.1f", -defaultDbStep),
+	}
+	return sendVolumeCommand(playerUrl, params)
+}
+
+// ToggleMute toggles the mute state
+func ToggleMute(playerUrl string) (*VolumeStatus, error) {
+	// Get current status first
+	status, err := sendVolumeCommand(playerUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Toggle the mute state
+	muteValue := "1"
+	if status.Mute == 1 {
+		muteValue = "0"
+	}
+
+	params := map[string]string{
+		"mute": muteValue,
+	}
+	return sendVolumeCommand(playerUrl, params)
+}
+
+// createVolumeCommand creates a bitbar command for volume control operations
+func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd {
+	baseURL := fmt.Sprintf("%s/Volume", playerUrl)
+	reqURL, _ := url.Parse(baseURL)
+
+	query := reqURL.Query()
+	for key, value := range params {
+		query.Set(key, value)
+	}
+	reqURL.RawQuery = query.Encode()
+
+	return bitbar.Cmd{
+		Bash:     "curl",
+		Params:   []string{"-sf", reqURL.String()},
+		Terminal: BoolPointer(false),
+		Refresh:  BoolPointer(true),
+	}
+}
+
+// SetVolume sets the volume to a specific level (0-100)
+func SetVolume(playerUrl string, level int) (*VolumeStatus, error) {
+	if level < 0 || level > 100 {
+		return nil, fmt.Errorf("invalid volume level %d (must be 0-100)", level)
+	}
+
+	params := map[string]string{
+		"level": strconv.Itoa(level),
+	}
+	return sendVolumeCommand(playerUrl, params)
+}
 func init() {
 	var err error
 	myConfig, err = godotenv.Read(fmt.Sprintf("%s/.env", os.Getenv("SWIFTBAR_PLUGINS_PATH")))
@@ -156,6 +253,99 @@ func main() {
 				Refresh:  BoolPointer(true),
 			}
 			submenu.Line(l).Command(cmd)
+		}
+	}
+
+	// Add volume controls section
+	submenu.Line("--- Volume Controls ---").Alternate(true)
+
+	// Get current volume status
+	if xmlBytes, err := getXML(fmt.Sprintf("%s/Volume", bluePlayerUrl)); err != nil {
+		submenu.Line("⚠️ Could not get volume").Color("red")
+	} else {
+		var volStatus VolumeStatus
+		if err := xml.Unmarshal(xmlBytes, &volStatus); err != nil {
+			submenu.Line("⚠️ Error parsing volume data").Color("red")
+			log.Printf("Failed to parse volume XML: %v", err)
+		} else {
+			// Display volume information
+			if volStatus.Mute == 1 {
+				submenu.Line(fmt.Sprintf("🔇 Volume: Muted (%d%%)", volStatus.Level))
+			} else {
+				submenu.Line(fmt.Sprintf("🔊 Volume: %d%%", volStatus.Level))
+			}
+
+			// Add dB information if available
+			if volStatus.Db != 0 {
+				submenu.Line(fmt.Sprintf("🎛 Volume dB: %.1f dB", volStatus.Db)).Alternate(true)
+			}
+
+			// Volume controls using the helper function
+			volumeUpCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"db": fmt.Sprintf("%.1f", defaultDbStep)})
+			volumeDownCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"db": fmt.Sprintf("%.1f", -defaultDbStep)})
+
+			submenu.Line("🔊 Volume Up").Command(volumeUpCmd)
+			submenu.Line("🔉 Volume Down").Command(volumeDownCmd)
+
+			// Mute controls
+			muteCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"mute": "1"})
+			unmuteCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"mute": "0"})
+
+			if volStatus.Mute == 1 {
+				submenu.Line("🔈 Unmute").Command(unmuteCmd)
+			} else {
+				submenu.Line("🔇 Mute").Command(muteCmd)
+			}
+
+			// Add volume preset buttons
+			submenu.Line("--- Volume Presets ---").Alternate(true)
+			volumePresets := []struct {
+				Label string
+				Level int
+			}{
+				{"🔈 Low (20%)", 20},
+				{"🔉 Medium (50%)", 50},
+				{"🔊 High (80%)", 80},
+				{"📢 Max (100%)", 100},
+			}
+
+			for _, preset := range volumePresets {
+				presetCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"level": strconv.Itoa(preset.Level)})
+				submenu.Line(preset.Label).Command(presetCmd)
+			}
+
+			// Add fine volume controls
+			submenu.Line("--- Fine Volume Control ---").Alternate(true)
+			fineSteps := []struct {
+				Label  string
+				DbStep float64
+			}{
+				{"🔊 Volume Up (1dB)", 1.0},
+				{"🔉 Volume Down (1dB)", -1.0},
+				{"🔊 Volume Up (0.5dB)", 0.5},
+				{"🔉 Volume Down (0.5dB)", -0.5},
+			}
+
+			for _, step := range fineSteps {
+				fineCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"db": fmt.Sprintf("%.1f", step.DbStep)})
+				submenu.Line(step.Label).Command(fineCmd)
+			}
+		}
+	}
+
+	// Add audio quality info section if player is active
+	if xmlBytes, err := getXML(statusUrl); err == nil {
+		var state StateXML
+		if err := xml.Unmarshal(xmlBytes, &state); err == nil && state.State != "stop" {
+			submenu.Line("--- Audio Information ---").Alternate(true)
+
+			if state.Quality != "" {
+				submenu.Line(fmt.Sprintf("🎧 Quality: %s", state.Quality))
+			}
+
+			if state.StreamFormat != "" {
+				submenu.Line(fmt.Sprintf("🎛 Format: %s", state.StreamFormat))
+			}
 		}
 	}
 	goto AppRender
@@ -321,4 +511,16 @@ type Presets struct {
 		Name  string `xml:"name,attr"`
 		Image string `xml:"image,attr"`
 	} `xml:"preset"`
+}
+
+// VolumeStatus represents the structure of the BluOS /Volume response XML
+type VolumeStatus struct {
+	XMLName    xml.Name `xml:"volume"`
+	Db         float64  `xml:"db,attr"`         // Volume level in dB
+	Mute       int      `xml:"mute,attr"`       // 1 if muted, 0 if not
+	MuteDb     *float64 `xml:"muteDb,attr"`     // Volume level in dB before mute
+	MuteVolume *int     `xml:"muteVolume,attr"` // Volume level before mute
+	OffsetDb   float64  `xml:"offsetDb,attr"`   // Volume offset in dB
+	Etag       string   `xml:"etag,attr"`       // Entity tag for caching
+	Level      int      `xml:",chardata"`       // Current volume level (0-100)
 }
