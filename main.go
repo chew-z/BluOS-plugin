@@ -3,16 +3,13 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 
-	"github.com/DexterLB/mpvipc"
 	"github.com/johnmccabe/go-bitbar"
 	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
@@ -36,19 +33,14 @@ func main() {
 	if m, e := strconv.Atoi(myConfig["MAX"]); e == nil {
 		MAX = m
 	}
-	blueWiFi := myConfig["BLUE_WIFI"]
+	// blueWiFi := myConfig["BLUE_WIFI"]
 	bluePlayerUrl := myConfig["BLUE_URL"]
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayerUrl)
 	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayerUrl)
 
 	app := bitbar.New()
 	submenu := app.NewSubMenu()
-	if ssid := getSSID(); !strings.Contains(ssid, blueWiFi) {
-		app.StatusLine(":network.slash:") // :waveform.slash:
-		submenu.Line(fmt.Sprintf("Connect to %s", blueWiFi))
-		submenu.Line(bluePlayerUrl).Alternate(true)
-		goto AppRender
-	}
+
 	if xmlBytes, err := getXML(statusUrl); err != nil {
 		submenu.Line(err.Error()).Color("red").Length(MAX)
 		log.Printf("Failed to get XML: %v", err)
@@ -98,9 +90,9 @@ func main() {
 			t2 := state.Title2
 			t3 := state.Title3
 			t4 := state.StreamFormat
-			if t1 == "mpv" && t2 == "mpv" {
-				t1, t2, t3, t4 = mpv()
-			}
+			// if t1 == "mpv" && t2 == "mpv" {
+			// 	t1, t2, t3, t4 = mpv()
+			// }
 			if state.Service == "AirPlay" {
 				if state.Mute == "0" {
 					c = fmt.Sprintf("%s/Volume?mute=1", bluePlayerUrl)
@@ -174,68 +166,67 @@ AppRender:
 // mpv() - mpv is above providing essential 'now playing' info to anyone
 // so we must read it from ipc socket (that must be configured and running)
 // https://mpv.io/manual/master/#json-ipc
-func mpv() (string, string, string, string) {
-	var t1, t2, t3, t4 string
-	socketPath := fmt.Sprintf("%s/mpv_socket", TMP)
-	conn := mpvipc.NewConnection(socketPath)
-	err := conn.Open()
-	if err != nil {
-		log.Println(err.Error())
-	}
-	defer conn.Close()
-	if prop, err := conn.Get("filtered-metadata"); err != nil {
-		log.Println(err.Error())
-	} else {
-		// log.Printf("playing: %v", prop)
-		m := prop.(map[string]interface{})
-		// log.Printf("playing: %s", m["icy-title"])
-		if m["icy-title"] != nil {
-			t1 = m["icy-title"].(string)
-		}
-		if m["icy-name"] != nil {
-			t2 = m["icy-name"].(string)
-		}
-		if m["title"] != nil {
-			t1 = m["title"].(string)
-		}
-		if m["artist"] != nil {
-			t2 = m["artist"].(string)
-		}
-		if m["Title"] != nil {
-			t1 = m["Title"].(string)
-		}
-		if m["Artist"] != nil {
-			t2 = m["Artist"].(string)
-		}
-		if m["TITLE"] != nil {
-			t1 = m["TITLE"].(string)
-		}
-		if m["ARTIST"] != nil {
-			t2 = m["ARTIST"].(string)
-		}
-	}
-	if prop, err := conn.Get("volume"); err != nil {
-		log.Println(err.Error())
-	} else {
-		// log.Printf("playing: %v", prop)
-		dB := vol2db(prop.(float64))
-		t3 = fmt.Sprintf("mpv: %.0f dB", dB)
-	}
-	if prop, err := conn.Get("audio-codec-name"); err != nil {
-		log.Println(err.Error())
-	} else {
-		// log.Printf("playing: %v", prop)
-		t4 += fmt.Sprintf("codec: %s", prop.(string))
-	}
-	if prop, err := conn.Get("audio-params/samplerate"); err != nil {
-		log.Println(err.Error())
-	} else {
-		// log.Printf("playing: %v", prop)
-		t4 += fmt.Sprintf(" samplerate: %.0f", prop.(float64))
-	}
-
-	return t1, t2, t3, t4
-}
+// func mpv() (string, string, string, string) {
+// 	var t1, t2, t3, t4 string
+// 	socketPath := fmt.Sprintf("%s/mpv_socket", TMP)
+// 	conn := mpvipc.NewConnection(socketPath)
+// 	err := conn.Open()
+// 	if err != nil {
+// 		log.Println(err.Error())
+// 	}
+// 	defer conn.Close()
+// 	if prop, err := conn.Get("filtered-metadata"); err != nil {
+// 		log.Println(err.Error())
+// 	} else {
+// 		// log.Printf("playing: %v", prop)
+// 		m := prop.(map[string]interface{})
+// 		// log.Printf("playing: %s", m["icy-title"])
+// 		if m["icy-title"] != nil {
+// 			t1 = m["icy-title"].(string)
+// 		}
+// 		if m["icy-name"] != nil {
+// 			t2 = m["icy-name"].(string)
+// 		}
+// 		if m["title"] != nil {
+// 			t1 = m["title"].(string)
+// 		}
+// 		if m["artist"] != nil {
+// 			t2 = m["artist"].(string)
+// 		}
+// 		if m["Title"] != nil {
+// 			t1 = m["Title"].(string)
+// 		}
+// 		if m["Artist"] != nil {
+// 			t2 = m["Artist"].(string)
+// 		}
+// 		if m["TITLE"] != nil {
+// 			t1 = m["TITLE"].(string)
+// 		}
+// 		if m["ARTIST"] != nil {
+// 			t2 = m["ARTIST"].(string)
+// 		}
+// 	}
+// 	if prop, err := conn.Get("volume"); err != nil {
+// 		log.Println(err.Error())
+// 	} else {
+// 		// log.Printf("playing: %v", prop)
+// 		dB := vol2db(prop.(float64))
+// 		t3 = fmt.Sprintf("mpv: %.0f dB", dB)
+// 	}
+// 	if prop, err := conn.Get("audio-codec-name"); err != nil {
+// 		log.Println(err.Error())
+// 	} else {
+// 		// log.Printf("playing: %v", prop)
+// 		t4 += fmt.Sprintf("codec: %s", prop.(string))
+// 	}
+// 	if prop, err := conn.Get("audio-params/samplerate"); err != nil {
+// 		log.Println(err.Error())
+// 	} else {
+// 		// log.Printf("playing: %v", prop)
+// 		t4 += fmt.Sprintf(" samplerate: %.0f", prop.(float64))
+// 	}
+// 	return t1, t2, t3, t4
+// }
 
 // assumes samples are multiplied by (vol/100)^3
 // https://github.com/mpv-player/mpv/blob/master/player/audio.c#L161
@@ -255,30 +246,12 @@ func getXML(url string) ([]byte, error) {
 		return []byte{}, fmt.Errorf("Status error: %v", resp.StatusCode)
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return []byte{}, fmt.Errorf("Read body: %v", err)
 	}
 
 	return data, nil
-}
-
-func getSSID() string {
-
-	const osxCmd = "/usr/bin/osascript"
-	const osxArgs = "/Users/rrj/Projekty/AppleScript/SSID.applescript"
-	cmd := exec.Command(osxCmd, osxArgs)
-	stdout, _ := cmd.StdoutPipe()
-	if err := cmd.Start(); err != nil {
-		return "Could not get SSID"
-	}
-	defer cmd.Wait()
-
-	var airport string
-	if b, err := ioutil.ReadAll(stdout); err == nil {
-		airport += (string(b))
-	}
-	return airport
 }
 
 func BoolPointer(b bool) *bool {
