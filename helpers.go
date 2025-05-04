@@ -83,7 +83,12 @@ func ToggleMute(playerUrl string) (*VolumeStatus, error) {
 // createVolumeCommand creates a bitbar command for volume control operations
 func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd {
 	baseURL := fmt.Sprintf("%s/Volume", playerUrl)
-	reqURL, _ := url.Parse(baseURL)
+	reqURL, err := url.Parse(baseURL)
+	if err != nil {
+		// For a command creation function, log the error but continue with a default
+		log.Printf("Error parsing URL %s: %v", baseURL, err)
+		return createCommand(baseURL) // Fallback to basic command
+	}
 
 	query := reqURL.Query()
 	for key, value := range params {
@@ -111,21 +116,21 @@ func SetVolume(playerUrl string, level int) (*VolumeStatus, error) {
 	return sendVolumeCommand(playerUrl, params)
 }
 
-// assumes samples are multiplied by (vol/100)^3
-// https://github.com/mpv-player/mpv/blob/master/player/audio.c#L161
-func vol2db(vol float64) float64 {
-	return 60.0 * math.Log(vol/100.0) / math.Log(10.0)
+// Db2vol converts dB to volume percentage (0-100)
+// This is the inverse of the vol2db function and maintains compatibility
+func Db2vol(db float64) float64 {
+	return 100.0 * math.Pow(10.0, db/60.0)
 }
 
 // tweaked from: https://stackoverflow.com/a/42718113/1170664
 func getXML(url string) ([]byte, error) {
 	log.Printf("Fetching XML from: %s", url)
-	
+
 	// Set timeout for requests
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	
+
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Printf("Error connecting to %s: %v", url, err)

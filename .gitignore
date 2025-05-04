@@ -6,3 +6,5 @@ go.sum
 bin/**
 system_prompt.txt
 *.log
+CLAUDE.md
+Claude.local.md
