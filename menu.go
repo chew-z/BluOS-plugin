@@ -210,6 +210,26 @@ func addRadioPresets(submenu *bitbar.SubMenu, presetsUrl, bluePlayerUrl string) 
 
 // addVolumeInfo adds volume information to the menu
 // Returns the parsed volume status for use in other sections
+// getVolumeSymbol dynamically selects the appropriate SF Symbol for volume levels
+func getVolumeSymbol(level int, isMuted bool) string {
+	if isMuted {
+		return ":speaker.slash.fill:"
+	}
+
+	switch {
+	case level <= 0:
+		return ":speaker.slash.fill:"  // Muted or zero volume
+	case level > 0 && level < 33:
+		return ":speaker.wave.1.fill:"  // Low volume
+	case level >= 33 && level < 66:
+		return ":speaker.wave.2.fill:"  // Medium volume
+	case level >= 66 && level < 100:
+		return ":speaker.wave.3.fill:"  // High volume
+	default:
+		return ":megaphone.fill:"  // Max volume
+	}
+}
+
 func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 	log.Printf("Getting volume info")
 	xmlBytes, err := getXML(volumeUrl)
@@ -228,11 +248,14 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 	
 	log.Printf("Current volume: %d%%, %.1f dB, Muted: %v", volStatus.Level, volStatus.Db, volStatus.Mute == 1)
 	
+	// Determine volume symbol and color
+	volumeSymbol := getVolumeSymbol(volStatus.Level, volStatus.Mute == 1)
+	
 	// Display volume information - dB as primary, percentage as alternate
 	if volStatus.Mute == 1 {
 		// For muted state, show in red
-		submenu.Line(fmt.Sprintf("🔇 Volume: %.1f dB (Muted)", volStatus.Db)).Color("red")
-		submenu.Line(fmt.Sprintf("🔇 Volume: %d%% (Muted)", volStatus.Level)).Alternate(true).Color("red")
+		submenu.Line(fmt.Sprintf("%s Volume: %.1f dB (Muted)", volumeSymbol, volStatus.Db)).Color("red")
+		submenu.Line(fmt.Sprintf("%s Volume: %d%% (Muted)", volumeSymbol, volStatus.Level)).Alternate(true).Color("red")
 	} else {
 		// For active state, use color based on volume level
 		volColor := ""  // default color
@@ -246,8 +269,8 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 			volColor = "green"
 		}
 		
-		submenu.Line(fmt.Sprintf("🔊 Volume: %.1f dB", volStatus.Db)).Color(volColor)
-		submenu.Line(fmt.Sprintf("🔊 Volume: %d%%", volStatus.Level)).Alternate(true).Color(volColor)
+		submenu.Line(fmt.Sprintf("%s Volume: %.1f dB", volumeSymbol, volStatus.Db)).Color(volColor)
+		submenu.Line(fmt.Sprintf("%s Volume: %d%%", volumeSymbol, volStatus.Level)).Alternate(true).Color(volColor)
 	}
 	
 	return &volStatus
@@ -266,10 +289,10 @@ func addVolumePresets(submenu *bitbar.SubMenu, bluePlayerUrl string, volStatus *
 		Label string
 		Level int
 	}{
-		{"📢 Max (100%)", 100},
-		{"🔊 High (80%)", 80},
-		{"🔉 Medium (50%)", 50},
-		{"🔈 Low (20%)", 20},
+		{":megaphone.fill: Max (100%)", 100},
+		{":speaker.wave.3.fill: High (80%)", 80},
+		{":speaker.wave.2.fill: Medium (50%)", 50},
+		{":speaker.wave.1.fill: Low (20%)", 20},
 	}
 	
 	// Highlight the current preset that's closest to the current volume
@@ -293,10 +316,10 @@ func addMuteToggle(submenu *bitbar.SubMenu, bluePlayerUrl string, volStatus *Vol
 	
 	if volStatus.Mute == 1 {
 		unmuteCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"mute": "0"})
-		submenu.Line("🔈 Unmute").Command(unmuteCmd)
+		submenu.Line(":speaker.wave.2.fill: Unmute").Command(unmuteCmd)
 	} else {
 		muteCmd := createVolumeCommand(bluePlayerUrl, map[string]string{"mute": "1"})
-		submenu.Line("🔇 Mute").Command(muteCmd)
+		submenu.Line(":speaker.slash.fill: Mute").Command(muteCmd)
 	}
 }
 
@@ -310,10 +333,10 @@ func addFineVolumeControls(submenu *bitbar.SubMenu, bluePlayerUrl string) {
 	downCmd05 := createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-0.5"})
 	downCmd1 := createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-1.0"})
 	
-	submenu.Line("🔊 Volume Up (0.5dB)").Command(upCmd05)
-	submenu.Line("🔊 Volume Up (1dB)").Command(upCmd1).Alternate(true)
-	submenu.Line("🔉 Volume Down (0.5dB)").Command(downCmd05)
-	submenu.Line("🔉 Volume Down (1dB)").Command(downCmd1).Alternate(true)
+	submenu.Line(":megaphone.fill: Volume Up (0.5dB)").Command(upCmd05)
+	submenu.Line(":megaphone.fill: Volume Up (1dB)").Command(upCmd1).Alternate(true)
+	submenu.Line(":speaker.wave.1.fill: Volume Down (0.5dB)").Command(downCmd05)
+	submenu.Line(":speaker.wave.1.fill: Volume Down (1dB)").Command(downCmd1).Alternate(true)
 }
 
 // addAudioInfo adds audio quality information when available

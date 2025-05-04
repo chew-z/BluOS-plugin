@@ -152,16 +152,16 @@ func main() {
 			submenu.Line(alternateInfo).Alternate(true)
 			
 			// Fine volume control as alternate lines
-			submenu.Line(":speaker.wave.3.fill: Volume Up 1dB").Alternate(true).Command(
+			submenu.Line(":speaker.wave.3.fill: Volume Up (1dB)").Alternate(true).Command(
 				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "1.0"}),
 			)
-			submenu.Line(":speaker.wave.1.fill: Volume Down 1dB").Alternate(true).Command(
+			submenu.Line(":speaker.wave.1.fill: Volume Down (1dB)").Alternate(true).Command(
 				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-1.0"}),
 			)
-			submenu.Line(":speaker.wave.2.fill: Volume Up 0.5dB").Alternate(true).Command(
+			submenu.Line(":speaker.wave.2.fill: Volume Up (0.5dB)").Alternate(true).Command(
 				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "0.5"}),
 			)
-			submenu.Line(":speaker.wave.2.fill: Volume Down 0.5dB").Alternate(true).Command(
+			submenu.Line(":speaker.wave.2.fill: Volume Down (0.5dB)").Alternate(true).Command(
 				createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-0.5"}),
 			)
 		}
@@ -211,10 +211,10 @@ func main() {
 					Label string
 					Level int
 				}{
-					{":arrow.up.circle.fill: Max (100%)", 100},
-					{":arrow.up.circle: High (80%)", 80},
-					{":arrow.down.circle: Medium (50%)", 50},
-					{":arrow.down.circle.fill: Low (20%)", 20},
+					{":megaphone.fill: Max (100%)", 100},
+					{":speaker.wave.3.fill: High (80%)", 80},
+					{":speaker.wave.2.fill: Medium (50%)", 50},
+					{":speaker.wave.1.fill: Low (20%)", 20},
 				}
 				
 				for _, preset := range volumePresets {
