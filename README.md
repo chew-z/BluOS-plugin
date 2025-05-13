@@ -32,3 +32,26 @@ BlueOS is not the fastest and the plugin is updated every 15 seconds, not everyt
 ## Location of BlueOS device
 
 You need `.env` file at `SWIFTBAR_PLUGINS_PATH` where you specify WiFi network `BLUE_WIFI`and an IP address `BLUE_URL` where your BlueOS device can be found
+
+## Troubleshooting
+
+### Device shows as disconnected but is actually online
+
+If the plugin shows the device as disconnected even though you can access it with curl or the BluOS app, try these solutions:
+
+1. **Restart the plugin**: Click the plugin icon in SwiftBar menu bar and select "Refresh".
+
+2. **Check your `.env` file**: Make sure the `BLUE_URL` setting is correct and has the proper format (e.g., `http://192.168.1.101:11000`).
+
+3. **Check your network**: Ensure your computer is on the same network as the BluOS device. Some WiFi networks may segment devices.
+
+4. **Device may be busy**: The BluOS device may temporarily stop responding to API calls if it's performing updates or processing heavy tasks. The plugin now includes better retry logic and will show different status messages for different connection issues.
+
+5. **Fixed IP address**: Consider setting a fixed/static IP address for your BluOS device in your router settings to prevent IP address changes.
+
+6. **Manual testing**: You can test connectivity manually with curl:
+   ```bash
+   curl -v http://YOUR_DEVICE_IP:11000/Status
+   ```
+   
+Versions 1.2.0+ include improved error handling and retry logic that should help with intermittent connectivity issues.

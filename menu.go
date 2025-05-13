@@ -52,10 +52,25 @@ func createStatusDisplay(app *bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl,
 		return
 	}
 
+	// Log the first part of the XML response for debugging
+	if len(xmlBytes) > 0 {
+		previewLength := 200
+		if len(xmlBytes) < previewLength {
+			previewLength = len(xmlBytes)
+		}
+		log.Printf("XML response preview: %s", string(xmlBytes[:previewLength]))
+	}
+
 	var state StateXML
 	if err := xml.Unmarshal(xmlBytes, &state); err != nil {
-		submenu.Line("Error parsing status data").Color("red")
 		log.Printf("Failed to parse status XML: %v", err)
+		
+		// Try to display something even if XML parsing fails
+		submenu.Line("XML parsing error - Limited display available").Color("orange")
+		submenu.Line(fmt.Sprintf("Error: %v", err)).Color("red")
+		
+		// Add a raw view option that might be useful for debugging
+		submenu.Line("Raw data available - device is connected").Color("blue")
 		return
 	}
 
@@ -232,11 +247,28 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 		return nil
 	}
 
+	// Log the volume XML response for debugging
+	if len(xmlBytes) > 0 {
+		previewLength := 200
+		if len(xmlBytes) < previewLength {
+			previewLength = len(xmlBytes)
+		}
+		log.Printf("Volume XML response preview: %s", string(xmlBytes[:previewLength]))
+	}
+
 	var volStatus VolumeStatus
 	if err := xml.Unmarshal(xmlBytes, &volStatus); err != nil {
 		submenu.Line("⚠️ Error parsing volume data").Color("red")
 		log.Printf("Failed to parse volume XML: %v", err)
-		return nil
+		
+		// Try to create a default volume object so the UI doesn't completely fail
+		log.Printf("Creating default volume status object")
+		return &VolumeStatus{
+			Db:    -30.0, // Default reasonable value
+			Mute:   0,
+			Level:  50, // Default reasonable value
+			Etag:   "unknown",
+		}
 	}
 
 	log.Printf("Current volume: %d%%, %.1f dB, Muted: %v", volStatus.Level, volStatus.Db, volStatus.Mute == 1)

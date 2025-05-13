@@ -126,31 +126,57 @@ func Db2vol(db float64) float64 {
 func getXML(url string) ([]byte, error) {
 	log.Printf("Fetching XML from: %s", url)
 
-	// Set timeout for requests
+	// Set timeout for requests - increased from 5s to 10s for better reliability
 	client := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Printf("Error connecting to %s: %v", url, err)
-		return []byte{}, fmt.Errorf("GET error: %v", err)
-	}
-	defer resp.Body.Close()
+	// Implement retry logic (3 attempts)
+	maxRetries := 3
+	var lastErr error
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Printf("Attempt %d/%d to fetch from %s", attempt, maxRetries, url)
+		
+		resp, err := client.Get(url)
+		if err != nil {
+			log.Printf("Error connecting to %s (attempt %d/%d): %v", url, attempt, maxRetries, err)
+			lastErr = fmt.Errorf("GET error: %v", err)
+			if attempt < maxRetries {
+				time.Sleep(500 * time.Millisecond) // Short delay between retries
+				continue
+			}
+			break
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Bad status code from %s: %d", url, resp.StatusCode)
-		return []byte{}, fmt.Errorf("Status error: %v", resp.StatusCode)
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Bad status code from %s (attempt %d/%d): %d", url, attempt, maxRetries, resp.StatusCode)
+			lastErr = fmt.Errorf("Status error: %v", resp.StatusCode)
+			if attempt < maxRetries {
+				time.Sleep(500 * time.Millisecond) // Short delay between retries
+				continue
+			}
+			break
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading response body from %s (attempt %d/%d): %v", url, attempt, maxRetries, err)
+			lastErr = fmt.Errorf("Read body: %v", err)
+			if attempt < maxRetries {
+				time.Sleep(500 * time.Millisecond) // Short delay between retries
+				continue
+			}
+			break
+		}
+
+		// If we get here, we succeeded
+		log.Printf("Successfully retrieved %d bytes from %s on attempt %d/%d", len(data), url, attempt, maxRetries)
+		return data, nil
 	}
 
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error reading response body from %s: %v", url, err)
-		return []byte{}, fmt.Errorf("Read body: %v", err)
-	}
-
-	log.Printf("Successfully retrieved %d bytes from %s", len(data), url)
-	return data, nil
+	// If we get here, all attempts failed
+	return []byte{}, lastErr
 }
 
 func BoolPointer(b bool) *bool {
