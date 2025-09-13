@@ -64,11 +64,11 @@ func createStatusDisplay(app *bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl,
 	var state StateXML
 	if err := xml.Unmarshal(xmlBytes, &state); err != nil {
 		log.Printf("Failed to parse status XML: %v", err)
-		
+
 		// Try to display something even if XML parsing fails
 		submenu.Line("XML parsing error - Limited display available").Color("orange")
 		submenu.Line(fmt.Sprintf("Error: %v", err)).Color("red")
-		
+
 		// Add a raw view option that might be useful for debugging
 		submenu.Line("Raw data available - device is connected").Color("blue")
 		return
@@ -260,14 +260,14 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 	if err := xml.Unmarshal(xmlBytes, &volStatus); err != nil {
 		submenu.Line("⚠️ Error parsing volume data").Color("red")
 		log.Printf("Failed to parse volume XML: %v", err)
-		
+
 		// Try to create a default volume object so the UI doesn't completely fail
 		log.Printf("Creating default volume status object")
 		return &VolumeStatus{
 			Db:    -30.0, // Default reasonable value
-			Mute:   0,
-			Level:  50, // Default reasonable value
-			Etag:   "unknown",
+			Mute:  0,
+			Level: 50, // Default reasonable value
+			Etag:  "unknown",
 		}
 	}
 

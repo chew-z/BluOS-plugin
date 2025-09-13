@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/johnmccabe/go-bitbar"
 	"github.com/joho/godotenv"
@@ -35,43 +33,32 @@ func init() {
 	}
 }
 
-// isDeviceReachable performs a simple network check to see if the device is reachable,
-// even if the main API might be having issues
-func isDeviceReachable(url string) bool {
-	// Try a few different endpoints to increase chances of success
-	endpoints := []string{"/Status", "/Volume", "/"}
-	
-	for _, endpoint := range endpoints {
-		fullURL := fmt.Sprintf("%s%s", url, endpoint)
-		log.Printf("Checking device reachability via: %s", fullURL)
-		
-		// Use a simple check with long timeout for reachability testing
-		client := &http.Client{
-			Timeout: 15 * time.Second, // Longer timeout for reachability check
-		}
-		
-		resp, err := client.Get(fullURL)
-		if err == nil {
-			resp.Body.Close() // Don't forget to close the body
-			log.Printf("Device is reachable via %s (status: %d)", endpoint, resp.StatusCode)
-			return true
-		}
-		
-		log.Printf("Failed to reach device via %s: %v", endpoint, err)
-	}
-	
-	log.Printf("Device appears to be completely unreachable")
-	return false
-}
-
 func main() {
 	// Initialize configuration
 	if m, e := strconv.Atoi(myConfig["MAX"]); e == nil {
 		MAX = m
 	}
 
-	// Get BluOS device URL
-	bluePlayerUrl := myConfig["BLUE_URL"]
+	// Get BluOS device URL (try discovery first, fall back to config)
+	bluePlayerUrl, err := getBluOSPlayerURL(myConfig["BLUE_URL"])
+	if err != nil {
+		log.Printf("Failed to determine BluOS player URL: %v", err)
+
+		// Create error menu
+		app := bitbar.New()
+		submenu := app.NewSubMenu()
+		app.StatusLine(":exclamationmark.triangle.fill: BluOS Not Found").DropDown(false).Color("red")
+		submenu.Line(":exclamationmark.triangle.fill: No BluOS Device Found").Color("red")
+		submenu.Line("Auto-discovery failed and no BLUE_URL configured").Color("gray")
+		submenu.Line("---")
+		submenu.Line("Troubleshooting:").Color("gray")
+		submenu.Line("• Ensure BluOS device is powered on").Color("gray")
+		submenu.Line("• Check you're on the same Wi-Fi network").Color("gray")
+		submenu.Line("• Set BLUE_URL in .env if discovery fails").Color("gray")
+		submenu.Line(fmt.Sprintf("Network: %s", myConfig["BLUE_WIFI"])).Color("gray")
+		app.Render()
+		return
+	}
 	log.Printf("Using BluOS URL: %s", bluePlayerUrl)
 
 	// Create BitBar app
@@ -82,7 +69,7 @@ func main() {
 	stateXML, err := getXML(statusUrl)
 	if err != nil {
 		log.Printf("Failed to get BluOS status XML: %v", err)
-		
+
 		// Check if the device is reachable at all
 		if isDeviceReachable(bluePlayerUrl) {
 			// Device is reachable but API might be having issues
