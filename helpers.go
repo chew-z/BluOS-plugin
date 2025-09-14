@@ -289,7 +289,9 @@ func findValidBluOSDevice(timeout time.Duration) (string, error) {
 			log.Printf("Device %s unreachable: %v", deviceURL, err)
 			continue
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Failed to close response body for %s: %v", deviceURL, err)
+		}
 
 		if resp.StatusCode == http.StatusOK {
 			log.Printf("Found working BluOS device: %s", deviceURL)
@@ -338,8 +340,10 @@ func isDeviceReachable(url string) bool {
 
 		resp, err := client.Get(fullURL)
 		if err == nil {
-			resp.Body.Close() // Don't forget to close the body
 			log.Printf("Device is reachable via %s (status: %d)", endpoint, resp.StatusCode)
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				log.Printf("Failed to close response body for %s: %v", fullURL, closeErr)
+			}
 			return true
 		}
 

@@ -42,7 +42,7 @@ func buildPlayerMenu(app *bitbar.Plugin, bluePlayerUrl string) {
 	log.Printf("Menu building completed")
 }
 
-// createStatusDisplay adds the status bar display based on player state
+// createStatusDisplay fetches the player status and delegates the display logic.
 func createStatusDisplay(app *bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl, bluePlayerUrl string) {
 	log.Printf("Creating status display")
 	xmlBytes, err := getXML(statusUrl)
@@ -52,137 +52,139 @@ func createStatusDisplay(app *bitbar.Plugin, submenu *bitbar.SubMenu, statusUrl,
 		return
 	}
 
-	// Log the first part of the XML response for debugging
-	if len(xmlBytes) > 0 {
-		previewLength := 200
-		if len(xmlBytes) < previewLength {
-			previewLength = len(xmlBytes)
-		}
-		log.Printf("XML response preview: %s", string(xmlBytes[:previewLength]))
-	}
-
 	var state StateXML
 	if err := xml.Unmarshal(xmlBytes, &state); err != nil {
 		log.Printf("Failed to parse status XML: %v", err)
-
-		// Try to display something even if XML parsing fails
-		submenu.Line("XML parsing error - Limited display available").Color("orange")
-		submenu.Line(fmt.Sprintf("Error: %v", err)).Color("red")
-
-		// Add a raw view option that might be useful for debugging
-		submenu.Line("Raw data available - device is connected").Color("blue")
+		submenu.Line("XML parsing error - Limited display").Color("orange")
 		return
 	}
 
-	// Log player state information
 	log.Printf("Player state: %s, Service: %s", state.State, state.Service)
-	log.Printf("Titles: '%s', '%s', '%s'", state.Title1, state.Title2, state.Title3)
 
-	c := fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl)
-	cmd := createCommand(c)
-
-	// Handle different states
+	// Delegate to the appropriate handler based on the player state
 	switch state.State {
 	case "connecting":
-		icon := ":bolt.fill:"
-		l1 := fmt.Sprintf("%s connecting", icon)
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-
+		handleConnectingState(app)
 	case "play":
-		icon := ":play.circle.fill:"
-		if state.Shuffle == "1" {
-			icon = ":shuffle.circle.fill:"
-		}
-		icon2 := ":pause.circle.fill:"
-		l1 := fmt.Sprintf("%s %s", icon, state.Name)
-		l2 := fmt.Sprintf("%s %s", icon, state.Album)
-		l3 := fmt.Sprintf("%s %s", icon, state.Artist)
-		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Name)
-		s2 := fmt.Sprintf("%s %s", ":music.note.list:", state.Quality)
-
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-		app.StatusLine(l2).DropDown(false).Length(MAX)
-		app.StatusLine(l3).DropDown(false).Length(MAX)
-		submenu.Line(s1).Command(cmd)
-		submenu.Line(s2).Alternate(true)
-
+		handlePlayState(app, submenu, &state, bluePlayerUrl)
 	case "stream":
-		var icon string
-		if state.Service == "AirPlay" {
-			icon = ":airplayaudio:"
-		} else if state.Service == "Spotify" {
-			icon = ":music.note.list:"
-		} else if state.Service == "Capture" {
-			icon = ":display:"
-			log.Printf("Found Capture service (HDMI ARC)")
-		} else {
-			icon = ":radio.fill:"
-		}
-		icon2 := ":pause.circle.fill:"
-
-		t1 := state.Title1
-		t2 := state.Title2
-		t3 := state.Title3
-		t4 := state.StreamFormat
-
-		if state.Service == "AirPlay" {
-			if state.Mute == "0" {
-				c = fmt.Sprintf("%s/Volume?mute=1", bluePlayerUrl)
-				icon2 = ":speaker.wave.1.fill:"
-			} else if state.Mute == "1" {
-				c = fmt.Sprintf("%s/Volume?mute=0", bluePlayerUrl)
-				icon2 = ":speaker.slash.fill:"
-			}
-			cmd = createCommand(c)
-		}
-		l1 := fmt.Sprintf("%s %s", icon, t1)
-		l2 := fmt.Sprintf("%s %s", icon, t2)
-		l3 := fmt.Sprintf("%s %s", icon, t3)
-		app.StatusLine(l2).DropDown(false).Length(MAX)
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-		if state.Service != "Spotify" {
-			app.StatusLine(l3).DropDown(false).Length(MAX)
-		}
-		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, t3)
-		s2 := t4
-		submenu.Line(s1).Length(MAX).Command(cmd)
-		submenu.Line(s2).Alternate(true)
-
-		log.Printf("Created status display for stream state (service: %s)", state.Service)
-
+		handleStreamState(app, submenu, &state, bluePlayerUrl)
 	case "pause":
-		icon := ":pause.circle.fill:"
-		icon2 := ":play.circle.fill:"
-		l1 := fmt.Sprintf("%s %s", icon, state.Title1)
-		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-		submenu.Line(s1).Length(MAX).Command(cmd)
-
+		handlePauseState(app, submenu, &state, bluePlayerUrl)
 	case "stop":
-		icon := ":stop.circle.fill:"
-		icon2 := ":play.circle.fill:"
-		c := fmt.Sprintf("%s/Play", bluePlayerUrl)
-		cmd = createCommand(c)
-		l1 := fmt.Sprintf("%s %s", icon, state.State)
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-		if state.Service != "" {
-			s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
-			submenu.Line(s1).Length(MAX).Command(cmd)
-		}
-		log.Printf("Created status display for stop state")
-
+		handleStopState(app, submenu, &state, bluePlayerUrl)
 	default:
-		log.Printf("Unhandled player state: %s", state.State)
-
-		// Add a generic display for unhandled states
-		icon := ":questionmark.circle.fill:"
-		l1 := fmt.Sprintf("%s %s", icon, state.State)
-		app.StatusLine(l1).DropDown(false).Length(MAX)
-		submenu.Line(fmt.Sprintf("State: %s", state.State))
-		submenu.Line(fmt.Sprintf("Service: %s", state.Service))
-		submenu.Line(fmt.Sprintf("Title: %s", state.Title1))
-		log.Printf("Created generic status display")
+		handleDefaultState(app, submenu, &state)
 	}
+}
+
+// handleConnectingState handles the display for the 'connecting' state.
+func handleConnectingState(app *bitbar.Plugin) {
+	icon := ":bolt.fill:"
+	l1 := fmt.Sprintf("%s connecting", icon)
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+}
+
+// handlePlayState handles the display for the 'play' state.
+func handlePlayState(app *bitbar.Plugin, submenu *bitbar.SubMenu, state *StateXML, bluePlayerUrl string) {
+	icon := ":play.circle.fill:"
+	if state.Shuffle == "1" {
+		icon = ":shuffle.circle.fill:"
+	}
+	icon2 := ":pause.circle.fill:"
+	l1 := fmt.Sprintf("%s %s", icon, state.Name)
+	l2 := fmt.Sprintf("%s %s", icon, state.Album)
+	l3 := fmt.Sprintf("%s %s", icon, state.Artist)
+	s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Name)
+	s2 := fmt.Sprintf("%s %s", ":music.note.list:", state.Quality)
+
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+	app.StatusLine(l2).DropDown(false).Length(MAX)
+	app.StatusLine(l3).DropDown(false).Length(MAX)
+
+	cmd := createCommand(fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl))
+	submenu.Line(s1).Command(cmd)
+	submenu.Line(s2).Alternate(true)
+}
+
+// handleStreamState handles the display for the 'stream' state.
+func handleStreamState(app *bitbar.Plugin, submenu *bitbar.SubMenu, state *StateXML, bluePlayerUrl string) {
+	var icon, icon2 string
+	switch state.Service {
+	case "AirPlay":
+		icon = ":airplayaudio:"
+	case "Spotify":
+		icon = ":music.note.list:"
+	case "Capture":
+		icon = ":display:"
+	default:
+		icon = ":radio.fill:"
+	}
+
+	cmd := createCommand(fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl))
+	if state.Service == "AirPlay" {
+		if state.Mute == "0" {
+			cmd = createCommand(fmt.Sprintf("%s/Volume?mute=1", bluePlayerUrl))
+			icon2 = ":speaker.wave.1.fill:"
+		} else {
+			cmd = createCommand(fmt.Sprintf("%s/Volume?mute=0", bluePlayerUrl))
+			icon2 = ":speaker.slash.fill:"
+		}
+	} else {
+		icon2 = ":pause.circle.fill:"
+	}
+
+	l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+	l2 := fmt.Sprintf("%s %s", icon, state.Title2)
+	l3 := fmt.Sprintf("%s %s", icon, state.Title3)
+	app.StatusLine(l2).DropDown(false).Length(MAX)
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+	if state.Service != "Spotify" {
+		app.StatusLine(l3).DropDown(false).Length(MAX)
+	}
+
+	s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title3)
+	submenu.Line(s1).Length(MAX).Command(cmd)
+	submenu.Line(state.StreamFormat).Alternate(true)
+}
+
+// handlePauseState handles the display for the 'pause' state.
+func handlePauseState(app *bitbar.Plugin, submenu *bitbar.SubMenu, state *StateXML, bluePlayerUrl string) {
+	icon := ":pause.circle.fill:"
+	icon2 := ":play.circle.fill:"
+	l1 := fmt.Sprintf("%s %s", icon, state.Title1)
+	s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
+
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+	cmd := createCommand(fmt.Sprintf("%s/Pause?toggle=1", bluePlayerUrl))
+	submenu.Line(s1).Length(MAX).Command(cmd)
+}
+
+// handleStopState handles the display for the 'stop' state.
+func handleStopState(app *bitbar.Plugin, submenu *bitbar.SubMenu, state *StateXML, bluePlayerUrl string) {
+	icon := ":stop.circle.fill:"
+	icon2 := ":play.circle.fill:"
+	l1 := fmt.Sprintf("%s %s", icon, state.State)
+
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+
+	if state.Service != "" {
+		cmd := createCommand(fmt.Sprintf("%s/Play", bluePlayerUrl))
+		s1 := fmt.Sprintf("%s %s: %s", icon2, state.ServiceName, state.Title1)
+		submenu.Line(s1).Length(MAX).Command(cmd)
+	}
+}
+
+// handleDefaultState handles the display for any other unhandled state.
+func handleDefaultState(app *bitbar.Plugin, submenu *bitbar.SubMenu, state *StateXML) {
+	log.Printf("Unhandled player state: %s", state.State)
+	icon := ":questionmark.circle.fill:"
+	l1 := fmt.Sprintf("%s %s", icon, state.State)
+
+	app.StatusLine(l1).DropDown(false).Length(MAX)
+	submenu.Line(fmt.Sprintf("State: %s", state.State))
+	submenu.Line(fmt.Sprintf("Service: %s", state.Service))
+	submenu.Line(fmt.Sprintf("Title: %s", state.Title1))
 }
 
 // addRadioPresets adds radio presets to the menu
@@ -238,6 +240,20 @@ func getVolumeSymbol(level int, isMuted bool) string {
 	}
 }
 
+// getVolumeColor determines the color for the volume display based on the level.
+func getVolumeColor(level int) string {
+	switch {
+	case level > 85:
+		return "red"
+	case level > 60:
+		return "orange"
+	case level > 30:
+		return "blue"
+	default:
+		return "green"
+	}
+}
+
 func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 	log.Printf("Getting volume info")
 	xmlBytes, err := getXML(volumeUrl)
@@ -283,16 +299,7 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 		submenu.Line(fmt.Sprintf("%s Volume: %d%% (Muted)", volumeSymbol, volStatus.Level)).Alternate(true).Color("red")
 	} else {
 		// For active state, use color based on volume level
-		var volColor string
-		if volStatus.Level > 85 {
-			volColor = "red"
-		} else if volStatus.Level > 60 {
-			volColor = "orange"
-		} else if volStatus.Level > 30 {
-			volColor = "blue"
-		} else {
-			volColor = "green"
-		}
+		volColor := getVolumeColor(volStatus.Level)
 
 		// Main volume display
 		submenu.Line(fmt.Sprintf("%s Volume: %.1f dB", volumeSymbol, volStatus.Db)).Color(volColor)
