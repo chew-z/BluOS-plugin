@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/xml"
+	
 	"fmt"
 	"io"
 	"log"
@@ -16,35 +16,7 @@ import (
 	"github.com/johnmccabe/go-bitbar"
 )
 
-const defaultDbStep = 2.0 // Typical dB step for volume up/down
 
-// sendVolumeCommand sends a command to the /Volume endpoint with parameters
-func sendVolumeCommand(playerUrl string, params map[string]string) (*VolumeStatus, error) {
-	baseURL := fmt.Sprintf("%s/Volume", playerUrl)
-	reqURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing base URL %s: %w", baseURL, err)
-	}
-
-	query := reqURL.Query()
-	for key, value := range params {
-		query.Set(key, value)
-	}
-	reqURL.RawQuery = query.Encode()
-
-	xmlBytes, err := getXML(reqURL.String())
-	if err != nil {
-		return nil, fmt.Errorf("volume command failed: %w", err)
-	}
-
-	var status VolumeStatus
-	if err := xml.Unmarshal(xmlBytes, &status); err != nil {
-		log.Printf("Failed to parse volume XML: %v\nXML: %s", err, string(xmlBytes))
-		return nil, fmt.Errorf("XML parsing error: %w", err)
-	}
-
-	return &status, nil
-}
 
 
 
