@@ -9,7 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"strconv"
+	
 	"time"
 
 	"github.com/hashicorp/mdns"
@@ -46,41 +46,7 @@ func sendVolumeCommand(playerUrl string, params map[string]string) (*VolumeStatu
 	return &status, nil
 }
 
-// VolumeUp increases the volume by the default dB step
-func VolumeUp(playerUrl string) (*VolumeStatus, error) {
-	params := map[string]string{
-		"db": fmt.Sprintf("%.1f", defaultDbStep),
-	}
-	return sendVolumeCommand(playerUrl, params)
-}
 
-// VolumeDown decreases the volume by the default dB step
-func VolumeDown(playerUrl string) (*VolumeStatus, error) {
-	params := map[string]string{
-		"db": fmt.Sprintf("%.1f", -defaultDbStep),
-	}
-	return sendVolumeCommand(playerUrl, params)
-}
-
-// ToggleMute toggles the mute state
-func ToggleMute(playerUrl string) (*VolumeStatus, error) {
-	// Get current status first
-	status, err := sendVolumeCommand(playerUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Toggle the mute state
-	muteValue := "1"
-	if status.Mute == 1 {
-		muteValue = "0"
-	}
-
-	params := map[string]string{
-		"mute": muteValue,
-	}
-	return sendVolumeCommand(playerUrl, params)
-}
 
 // createVolumeCommand creates a bitbar command for volume control operations
 func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd {
@@ -106,17 +72,7 @@ func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd 
 	}
 }
 
-// SetVolume sets the volume to a specific level (0-100)
-func SetVolume(playerUrl string, level int) (*VolumeStatus, error) {
-	if level < 0 || level > 100 {
-		return nil, fmt.Errorf("invalid volume level %d (must be 0-100)", level)
-	}
 
-	params := map[string]string{
-		"level": strconv.Itoa(level),
-	}
-	return sendVolumeCommand(playerUrl, params)
-}
 
 // Db2vol converts dB to volume percentage (0-100)
 // This is the inverse of the vol2db function and maintains compatibility

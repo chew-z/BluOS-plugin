@@ -39,6 +39,4 @@
 
     - @./GOLANG.md
 
-    - @./CODANNA.md
-
     - @./GODOC.md
