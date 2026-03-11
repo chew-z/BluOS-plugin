@@ -1,42 +1,38 @@
 # CLAUDE.md
 
-# Repository Guidelines
+## GOLANG
 
-## Project Structure & Module Organization
-- Go module root with primary entry in `main.go`; helpers in `helpers.go`, UI/menu in `menu.go`, BluOS XML types in `structs.go`.
-- Binaries live in `bin/` (e.g., `bin/blueos.8s.gobin`) for SwiftBar.
-- Env files: `.env` (local) and `.env.example` (template). The plugin reads `.env` from `SWIFTBAR_PLUGINS_PATH`.
-- Docs and tooling: `README.md`, `GOLANG.md`, and utility scripts in repo root.
+@./GOLANG.md
 
-## Build, Test, and Development Commands
-- `go build -o bin/blueos.8s.gobin .` — build the SwiftBar plugin binary.
-- `./run_format.sh` — run `gofmt -w .` to format the code.
-- `./run_lint.sh` — run `golangci-lint run --fix ./...`.
-- `./run_test.sh` — run `go test -v ./...`.
-- Example SwiftBar run: place the built binary in your `SWIFTBAR_PLUGINS_PATH` and ensure it is executable.
+### Learning about Golang packages
 
-## Coding Style & Naming Conventions
-- Follow Go idioms; format with `gofmt` and lint with `golangci-lint`.
-- Use descriptive file names (`menu.go`, `helpers.go`); exported identifiers use CamelCase.
-- Avoid deprecated packages (`io/ioutil`) and `log.Fatal`/`log.Panic` per `GOLANG.md`.
+@./GODOC.md
 
-## Testing Guidelines
-- Framework: standard `testing` package; add `_test.go` alongside code.
-- Prefer table-driven tests for helpers and parsing (e.g., XML decode in `helpers.go`/`structs.go`).
-- Run tests via `./run_test.sh`. Aim to cover core behaviors (status parsing, volume math, URL building).
+## Language server (LSP) is your superpower
 
-## Commit & Pull Request Guidelines
-- Use Conventional Commits found in history: `feat(menu): ...`, `fix(volume): ...`.
-- PRs should include: clear summary, linked issue (if any), before/after notes or screenshots for UI changes, and steps to validate (build/run commands).
-- Keep changes focused; update docs when behavior or flags change.
+1) After every file edit, the language server pushes diagnostics: type errors, missing imports, undefined variables. Claude Code sees these immediately and fixes them in the same turn, before you ever see the error.
 
-## Security & Configuration Tips
-- Required env in `SWIFTBAR_PLUGINS_PATH/.env`: `BLUE_URL` (e.g., `http://192.168.1.101:11000`), `BLUE_WIFI` (SSID).
-- Do not commit secrets; use `.env.example` to document keys.
-- Prefer static IP for the BluOS device to avoid breakage.
+After writing or editing code, check LSP diagnostics and fix errors before proceeding.
 
-## Additional Instructions
+2) Beyond automatic diagnostics, Claude Code can explicitly ask the language server questions:
 
-    - @./GOLANG.md
+* goToDefinition — "Where is processOrder defined?" → exact file and line
+* findReferences — "Find all places that call validateUser" → every call site with location
+* hover — "What type is the config variable?" → full type signature and docs
+* documentSymbol — "List all functions in this file" → every symbol with location
+* workspaceSymbol — "Find the PaymentService class" → search symbols across the entire project
+* goToImplementation — "What classes implement AuthProvider?" → concrete implementations of interfaces
+* incomingCalls / outgoingCalls — "What calls processPayment?" → full call hierarchy tracing
 
-    - @./GODOC.md
+Use LSP for code navigation — it's fast, precise, and avoids reading entire files:
+
+LSP uses gopls for Golang
+
+## Working with Postgres database
+
+- Your access to Postgres database IS and SHOULD BE read-only
+- You are allowed to use MCP tools for read-only access to Postges database
+- You are FORBIDEN from writing hack scripts that would write to Postgres database for quick fixes. THIS IS STRICTLY FORBIDDEN HACK!
+- For changing database structure, adding tables, database functions, indexes etc. you MUST create SQL scripts in `migrations` folder
+- Don't use psql expressions in migration scripts.
+- User runs migrations scripts himself via Postico Postgres console

@@ -9,28 +9,23 @@ bin/**
 test_*
 
 AGENTS.md
+CLAUDE.md
+CODANNA.md
 GOLANG.md
 GODOC.md
-CODANNA.md
 
-reports/**
-.repomix/
-repomix.config.json
-repomix-output.xml
-
-.aider*
-.claude/**
-.codex/**
-.gemini/**
-.vscode/**
+.claude/
+.codex/
+.github/
+.vscode/
 
 .mcp.json
 
-.codanna/**
+.codanna/
 .codannaignore
-.fastembed_cache/**
+.fastembed_cache/
 
 run_*.sh
 run_format.sh
 run_lint.sh
-run_tests.sh
+run_test.sh

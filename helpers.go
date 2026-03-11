@@ -2,23 +2,19 @@ package main
 
 import (
 	"context"
-	
+
 	"fmt"
 	"io"
 	"log"
 	"math"
 	"net/http"
 	"net/url"
-	
+
 	"time"
 
 	"github.com/hashicorp/mdns"
 	"github.com/johnmccabe/go-bitbar"
 )
-
-
-
-
 
 // createVolumeCommand creates a bitbar command for volume control operations
 func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd {
@@ -43,8 +39,6 @@ func createVolumeCommand(playerUrl string, params map[string]string) bitbar.Cmd 
 		Refresh:  BoolPointer(true),
 	}
 }
-
-
 
 // Db2vol converts dB to volume percentage (0-100)
 // This is the inverse of the vol2db function and maintains compatibility

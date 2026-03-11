@@ -14,7 +14,6 @@ func buildPlayerMenu(app *bitbar.Plugin, bluePlayerUrl string) {
 	log.Printf("Building player menu for %s", bluePlayerUrl)
 	statusUrl := fmt.Sprintf("%s/Status", bluePlayerUrl)
 	presetsUrl := fmt.Sprintf("%s/Presets", bluePlayerUrl)
-	volumeUrl := fmt.Sprintf("%s/Volume", bluePlayerUrl)
 
 	submenu := app.NewSubMenu()
 
@@ -31,7 +30,7 @@ func buildPlayerMenu(app *bitbar.Plugin, bluePlayerUrl string) {
 	submenu.Line("---")
 
 	// Add volume info (no header)
-	volStatus := addVolumeInfo(submenu, volumeUrl)
+	volStatus := addVolumeInfo(submenu, bluePlayerUrl)
 
 	// Add volume presets (no header)
 	addVolumePresets(submenu, bluePlayerUrl, volStatus)
@@ -254,8 +253,9 @@ func getVolumeColor(level int) string {
 	}
 }
 
-func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
+func addVolumeInfo(submenu *bitbar.SubMenu, bluePlayerUrl string) *VolumeStatus {
 	log.Printf("Getting volume info")
+	volumeUrl := fmt.Sprintf("%s/Volume", bluePlayerUrl)
 	xmlBytes, err := getXML(volumeUrl)
 	if err != nil {
 		submenu.Line("⚠️ Could not get volume").Color("red")
@@ -309,10 +309,10 @@ func addVolumeInfo(submenu *bitbar.SubMenu, volumeUrl string) *VolumeStatus {
 
 		// Fine volume control as alternate lines
 		submenu.Line(":speaker.wave.3.fill: Volume Up (1dB)").Command(
-			createVolumeCommand(volumeUrl, map[string]string{"db": "1.0"}),
+			createVolumeCommand(bluePlayerUrl, map[string]string{"db": "1.0"}),
 		).Alternate(true)
 		submenu.Line(":speaker.wave.1.fill: Volume Down (1dB)").Command(
-			createVolumeCommand(volumeUrl, map[string]string{"db": "-1.0"}),
+			createVolumeCommand(bluePlayerUrl, map[string]string{"db": "-1.0"}),
 		).Alternate(true)
 	}
 
@@ -334,8 +334,8 @@ func addVolumePresets(submenu *bitbar.SubMenu, bluePlayerUrl string, volStatus *
 	}{
 		{":megaphone.fill: Max (100%)", 100},
 		{":speaker.wave.3.fill: High (80%)", 80},
-		{":speaker.wave.2.fill: Medium (50%)", 50},
-		{":speaker.wave.1.fill: Low (20%)", 20},
+		{":speaker.wave.2.fill: Medium (60%)", 60},
+		{":speaker.wave.1.fill: Low (40%)", 40},
 	}
 
 	// Highlight the current preset that's closest to the current volume
