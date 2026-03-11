@@ -24,6 +24,7 @@ GODOC.md
 .codanna/
 .codannaignore
 .fastembed_cache/
+reports/
 
 run_*.sh
 run_format.sh
